@@ -103,7 +103,41 @@ def generate_report_with_llm(papers):
   ],
   "paper_tracks": [
     {
-      "track_name": "强化学习（RL）与 Agentic 训练",
+      "track_name": "强化学习与 LLM 训练算法 (RL, RLHF, Alignment, Distillation)",
+      "recommended": [
+        {
+          "title": "论文标题",
+          "url": "链接",
+          "authors": "作者信息",
+          "published": "发布日期",
+          "total_score": 85,
+          "score_breakdown": {
+            "institution_authority": 25,
+            "keyword_relevance": 28,
+            "timeliness": 18,
+            "category_match": 8,
+            "title_heat": 6
+          },
+          "core_contribution": "核心贡献详述（问题→方法→结果，严格基于原文，严禁编造数据）",
+          "technical_highlights": "技术亮点",
+          "differentiation": "与现有工作的差异",
+          "code_availability": "代码/复现信息",
+          "application_direction": "落地方向",
+          "difficulty": "Low"
+        }
+      ],
+      "worth_knowing": [
+        {
+          "title": "论文标题",
+          "url": "链接",
+          "one_line_summary": "一句话总结",
+          "highlights": "亮点",
+          "application_tip": "落地提示"
+        }
+      ]
+    },
+    {
+      "track_name": "Agentic 系统与前沿评测 (Coding Agent, 多模态, Benchmark)",
       "recommended": [
         {
           "title": "论文标题",
@@ -164,7 +198,7 @@ def generate_report_with_llm(papers):
 
 # 筛选与分析规则
 - 按总分降序排列，选出Top 6-10篇**学术论文**。
-- 将选中论文分为「强烈推荐」(Top 3-5) 和「值得知道」(其余) 两个等级。
+- 将选中论文分为「强烈推荐」(Top 3-5) 和「值得知道」(其余) 两个等级，并根据研究内容，合理分配到 "强化学习与 LLM 训练算法" 或 "Agentic 系统与前沿评测" 这两个赛道中。
 - 提炼跨领域洞察（识别不同研究方向之间的关联）。
 - 撰写执行摘要，分别概括上述4个领域的本周最重要发现。
 
