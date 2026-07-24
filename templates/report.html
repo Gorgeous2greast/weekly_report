@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Research Digest — {{ report_date }}</title>
+<style>
+  :root {
+    --bg: #f1f5f9; --card: #ffffff; --text: #0f172a; --muted: #64748b; --border: #e2e8f0; --code-bg: #f8fafc;
+    --indigo: #6366f1; --indigo-bg: #eef2ff; --indigo-lt: #c7d2fe;
+    --emerald: #10b981; --emerald-bg: #ecfdf5; --emerald-lt: #a7f3d0;
+    --amber: #f59e0b; --amber-bg: #fffbeb; --amber-lt: #fde68a;
+    --rose: #f43f5e; --rose-bg: #fff1f2; --slate-bg: #f8fafc;
+  }
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif; background: var(--bg); color: var(--text); font-size: 14px; line-height: 1.75; padding: 28px 16px 60px; }
+  .container { max-width: 860px; margin: 0 auto; }
+  .page-header { background: #fff; border: 1px solid var(--border); border-radius: 14px; padding: 24px 28px 20px; margin-bottom: 20px; display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; }
+  .page-header-left h1 { font-size: 20px; font-weight: 700; color: var(--text); letter-spacing: -0.3px; }
+  .page-header-left .subtitle { font-size: 13px; color: var(--muted); margin-top: 4px; }
+  .page-header-badge { background: var(--indigo-bg); color: var(--indigo); font-size: 12px; font-weight: 600; padding: 4px 10px; border-radius: 20px; white-space: nowrap; margin-top: 2px; }
+  .track-section { background: var(--card); border: 1px solid var(--border); border-radius: 14px; margin-bottom: 20px; overflow: hidden; }
+  .track-header { display: flex; align-items: center; gap: 10px; padding: 16px 22px; border-bottom: 1px solid var(--border); }
+  .track-header.indigo { background: var(--indigo-bg); }
+  .track-header.emerald { background: var(--emerald-bg); }
+  .track-header.slate { background: var(--slate-bg); }
+  .track-header.rose { background: var(--rose-bg); }
+  .track-title { font-size: 14px; font-weight: 700; }
+  .track-header.indigo .track-title { color: #3730a3; }
+  .track-header.emerald .track-title { color: #065f46; }
+  .track-header.slate .track-title { color: #334155; }
+  .track-header.rose .track-title { color: #9f1239; }
+  .track-body { padding: 20px 22px; }
+  .sub-label { font-size: 11px; font-weight: 700; letter-spacing: 0.8px; text-transform: uppercase; color: var(--muted); margin-bottom: 12px; margin-top: 20px; padding-bottom: 6px; border-bottom: 1px solid var(--border); }
+  .sub-label:first-child { margin-top: 0; }
+  .rec-card { border: 1px solid var(--border); border-radius: 10px; padding: 14px 16px; margin-bottom: 10px; border-left-width: 3px; }
+  .rec-card:last-child { margin-bottom: 0; }
+  .rec-card.indigo { border-left-color: var(--indigo); }
+  .rec-card.emerald { border-left-color: var(--emerald); }
+  .rec-card-title { font-size: 14px; font-weight: 700; color: var(--text); margin-bottom: 8px; line-height: 1.4; }
+  .rec-card-title a { color: inherit; text-decoration: none; }
+  .rec-card-title a:hover { color: var(--indigo); }
+  .rec-card-body { font-size: 13px; color: #334155; line-height: 1.7; }
+  .rec-card-body p { margin-bottom: 5px; }
+  .rec-card-body strong { color: var(--text); font-weight: 600; }
+  .rec-card-body a { color: var(--indigo); text-decoration: none; }
+  .know-item { padding: 10px 0; border-bottom: 1px solid var(--border); font-size: 13px; color: #334155; line-height: 1.65; }
+  .know-item:last-child { border-bottom: none; padding-bottom: 0; }
+  .know-item-title { font-weight: 700; color: var(--text); margin-bottom: 4px; }
+  .know-item-title a { color: inherit; text-decoration: none; }
+  .know-item-title a:hover { color: var(--indigo); }
+  .badge { display: inline-block; padding: 1px 7px; border-radius: 10px; font-size: 11px; font-weight: 600; margin-left: 4px; vertical-align: middle; }
+  .badge-low { background: #dcfce7; color: #166534; }
+  .badge-medium { background: #fef9c3; color: #854d0e; }
+  .badge-high { background: #fee2e2; color: #991b1b; }
+  .insight-section { background: var(--amber-bg); border: 1px solid var(--amber-lt); border-radius: 14px; padding: 20px 24px; margin-bottom: 20px; }
+  .insight-section-title { font-size: 13px; font-weight: 700; color: #92400e; margin-bottom: 12px; display: flex; align-items: center; gap: 6px; }
+  .insight-card { background: #fff; border: 1px solid var(--amber-lt); border-radius: 8px; padding: 12px 14px; margin-bottom: 8px; }
+  .insight-card:last-child { margin-bottom: 0; }
+  .insight-card-title { font-size: 13px; font-weight: 700; color: #78350f; margin-bottom: 6px; }
+  .insight-card-body { font-size: 13px; color: #451a03; line-height: 1.65; }
+  hr { border: none; border-top: 1px solid var(--border); margin: 14px 0; }
+  ol { margin: 6px 0 8px 18px; }
+  li { margin-bottom: 6px; }
+  a { color: var(--indigo); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+</ an>
+<body>
+<div class="container">
+  <!-- Header -->
+  <div class="page-header">
+    <div class="page-header-left">
+      <h1>Research Brief</h1>
+      <div class="subtitle">聚焦 RL, Agentic RL & Model Training</div>
+    </div>
+    <div class="page-header-badge">{{ report_date }}</div>
+  </div>
+
+  <!-- Executive Summary -->
+  <div class="track-section">
+    <div class="track-header slate"><span class="track-title">执行摘要（本周最重要发现）</span></div>
+    <div class="track-body">
+      <ol>
+      {% for item in executive_summary %}
+        <li>{{ item | safe }}</li>
+      {% endfor %}
+      </olZY>
+    </div>
+  </div>
+
+  <!-- Cross Insights -->
+  {% if cross_insights %}
+  <div class="insight-section">
+    <div class="insight-section-title">💡 跨领域洞察</div>
+    {% for insight in cross_insights %}
+    <div class="insight-card">
+      <div class="insight-card-title">{{ insight.title }}</div>
+      <div class="insight-card-body">{{ insight.content | safe }}</div>
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  <!-- Paper Tracks -->
+  {% for track in paper_tracks %}
+  <div class="track-section">
+    <div class="track-header indigo"><span class="track-title">{{ track.track_name }}</span></div>
+    <div class="track-body">
+      
+      {% if track.recommended %}
+      <div class="sub-label">强烈推荐</div>
+      {% for paper in track.recommended %}
+      <div class="rec-card indigo">
+        <div class="rec-card-title"><a href="{{ paper.url }}" target="_blank">{{ paper.title }}</a></div>
+        <div class="rec-card-body">
+          <p><strong>来源</strong>：{{ paper.published }}，作者：{{ paper.authors }}</p>
+          <p><strong>核心贡献</strong>：<br>{{ paper.core_contribution | safe }}</p>
+          {% if paper.technical_highlights %}<p><strong>技术细节</strong>：{{ paper.technical_highlights | safe }}</p>{% endif %}
+          {% if paper.differentiation %}<p><strong>与现有工作的差异</strong>：{{ paper.differentiation | safe }}</p>{% endif %}
+          {% if paper.code_availability %}<p><strong>代码/复现</strong>：{{ paper.code_availability | safe }}</p>{% endif %}
+          <p><strong>落地方向</strong>：{{ paper.application_direction | safe }}</p>
+          <p><strong>落地难度</strong>：<span class="badge badge-{{ paper.difficulty | lower }}">{{ paper.difficulty }}</span></p>
+        </div>
+      </div>
+      {% endfor %}
+      {% endif %}
+
+      {% if track.worth_knowing %}
+      <div class="sub-label">值得知道</div>
+      {% for paper in track.worth_knowing %}
+      <div class="know-item">
+        <div class="know-item-title"><a href="{{ paper.url }}" target="_blank">{{ paper.title }}</a></div>
+        <p><strong>一句话</strong>：{{ paper.one_line_summary | safe }}</p>
+        {% if paper.highlights %}<p><strong>亮点</strong>：{{ paper.highlights | safe }}</p>{% endif %}
+        {% if paper.application_tip %}<p><strong>落地提示</strong>：{{ paper.application_tip | safe }}</p>{% endif %}
+      </div>
+      {% endfor %}
+      {% endif %}
+
+    </div>
+  </div>
+  {% endfor %}
+
+  <!-- Top Papers -->
+  {% if top_papers %}
+  <div class="track-section">
+    <div class="track-header rose"><span class="track-title">值得深入阅读的 Top Papers</span></div>
+    <div class="track-body">
+      <ol>
+      {% for paper in top_papers %}
+        <li>
+          <strong><a href="{{ paper.url }}" target="_blank">{{ paper.title }}</a></strong>
+          <p>{{ paper.reason | safe }}</p>
+        </li>
+      {% endfor %}
+      </ol>
+    </div>
+  </div>
+  {% endif %}
+
+  <div style="text-align: center; margin-top: 40px; color: var(--muted); font-size: 12px;">
+    <p>Generated by AI Weekly Report Bot | Powered by GitHub Actions</p>
+  </div>
+</div>
+</body>
+</html>
