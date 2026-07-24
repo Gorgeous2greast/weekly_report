@@ -86,36 +86,17 @@ def generate_report_with_llm(papers):
     # 将论文列表格式化为 Prompt 输入
     papers_text = ""
     for p in papers:
-        papers_text += f"论文{p['index']}：\n- 标题：{p['title']}\n- 链接：{p['url']}\n- 作者：{p['authors']}\n- 摘要：{p['abstract']}\n- 发布日期：{p['published']}\n- 分类：{p['categories']}\n\n"
+        papers_text += f"条目{p['index']}：\n- 类型：{p.get('topic', 'Paper')}\n- 标题：{p['title']}\n- 链接：{p['url']}\n- 作者/来源：{p['authors']}\n- 摘要/Release Note：{p['abstract']}\n- 发布日期：{p['published']}\n- 分类：{p['categories']}\n\n"
 
-    # 🌟 融合版超级 Prompt：一次性完成 5 维度评分 + 深度分析 + 结构化 JSON 输出
-    prompt = f"""# 角色定义
-你是AI前沿论文评审专家兼周报编辑，专注于强化学习、RLHF、LLM训练、Agentic RL等领域。
-
-# 任务目标
-对提供的论文列表进行5维度评分（总分100分），选出Top 6-10篇高质量论文，并直接生成一份完整的周报结构化 JSON 数据。
-
-# 评分维度（总分100分，用于内部评估排序）
-1. 机构权威性(30分): 顶校大厂=25-30；知名院校=15-24；普通=5-14
-2. 关键词相关性(30分): 直接命中(RL, RLHF, GRPO, PPO, agentic, LLM training等)=25-30；间接=15-24
-3. 时效性(20分): 3天内=18-20；1周内=12-17；2周内=6-11
-4. 分类匹配度(10分): 核心分类(cs.LG, cs.AI, cs.CL, stat.ML)=8-10；相关=4-7
-5. 标题热度信号(10分): 含突破性关键词=8-10；有一定吸引力=4-7
-
-# 筛选与分析规则
-- 按总分降序排列，选出Top 6-10篇。
-- 将选中论文分为「强烈推荐」(Top 3-5) 和「值得知道」(其余) 两个等级。
-- 提炼跨领域洞察（识别不同研究方向之间的关联）。
-- 撰写 3-5 句话的执行摘要，概括本周最重要发现。
-
-# 输出 JSON 结构 (严格遵循，不要包含 ```json 等 Markdown 标记)
+    # 🌟 步骤 1: 提取 JSON 模板为普通字符串 (使用单层花括号，避免 f-string 嵌套报错)
+    json_template = """
 {
   "report_date": "YYYY-MM-DD",
   "executive_summary": {
     "rl": "强化学习(RL)领域本周最重要发现（1-2句话）",
     "agentic_rl": "Agentic RL / Coding Agent 领域本周最重要发现（1-2句话）",
     "llm_training": "LLM 训练/对齐领域本周最重要发现（1-2句话）",
-    "framework_updates": "训练框架（如 verl, ms-swift）本周 GitHub 最新动态总结（1-2句话）"
+    "framework_updates": "训练框架（如 verl, ms-swift）本周 GitHub 最新动态总结（1-2句话，若无更新则写'本周无重要框架更新'）"
   },
   "cross_insights": [
     {"title": "洞察标题", "content": "洞察详细描述"}
@@ -160,15 +141,45 @@ def generate_report_with_llm(papers):
     {"title": "论文标题", "url": "链接", "reason": "推荐理由（2-3句话）"}
   ]
 }
+"""
+
+    # 🌟 步骤 2: 使用 f-string 组装最终 Prompt
+    prompt = f"""# 角色定义
+你是AI前沿论文评审专家兼周报编辑，专注于以下领域：
+1. 强化学习（RL）：PPO, GRPO, RLHF, DPO 等算法及其在 LLM 上的应用
+2. Agentic RL：智能体学习、Coding Agent、多智能体系统等（不限制具体场景）
+3. LLM 训练与对齐：预训练、监督微调、偏好对齐等
+4. 训练框架动态：verl, ms-swift 等主流训练框架的 GitHub 更新
+⚠️ 注意：不关注纯机器人（Robotics）或纯具身智能硬件相关的研究，除非涉及核心 RL 算法创新。
+
+# 任务目标
+对提供的**学术论文**进行5维度评分（总分100分），选出Top 6-10篇高质量论文，并直接生成一份完整的周报结构化 JSON 数据。
+
+# 评分维度（总分100分，仅用于学术论文评分）
+1. 机构权威性(30分): 顶校大厂=25-30；知名院校=15-24；普通=5-14
+2. 关键词相关性(30分): 直接命中(RL, RLHF, GRPO, PPO, agentic, LLM training等)=25-30；间接=15-24
+3. 时效性(20分): 3天内=18-20；1周内=12-17；2周内=6-11
+4. 分类匹配度(10分): 核心分类(cs.LG, cs.AI, cs.CL, stat.ML)=8-10；相关=4-7
+5. 标题热度信号(10分): 含突破性关键词=8-10；有一定吸引力=4-7
+
+# 筛选与分析规则
+- 按总分降序排列，选出Top 6-10篇**学术论文**。
+- 将选中论文分为「强烈推荐」(Top 3-5) 和「值得知道」(其余) 两个等级。
+- 提炼跨领域洞察（识别不同研究方向之间的关联）。
+- 撰写执行摘要，分别概括上述4个领域的本周最重要发现。
+
+# 输出 JSON 结构 (严格遵循，不要包含 ```json 等 Markdown 标记)
+{json_template}
 
 # 约束
 - ⚠️ 绝对真实性约束：所有「核心贡献」、「技术亮点」必须严格基于提供的 abstract/release note 原文总结，严禁编造任何未提及的实验数据、指标或结论！
+- ⚠️ 框架更新不参与评分：[Framework Update] 开头的条目仅用于生成 executive_summary.framework_updates，绝对不应出现在 paper_tracks 或 top_papers 中。
 - 每篇论文的「核心贡献」控制在 100-150 字以内。
 - 「值得知道」部分只保留「一句话总结」和「亮点」。
 - 如果论文超过 10 篇，优先保证「强烈推荐」部分的完整性。
-- 仅返回纯 JSON，绝对不要包含 ```json 等 Markdown 标记。
+- 仅返回纯 JSON，绝对不要包含任何额外的解释文本或 Markdown 标记。
 
-# 待分析论文列表：
+# 待分析内容列表：
 {papers_text}
 """
 
@@ -183,36 +194,35 @@ def generate_report_with_llm(papers):
     response = requests.post(f"{LLM_BASE_URL}/chat/completions", headers=headers, json=payload)
     response.raise_for_status()
     
-    # 🔍 调试：打印完整响应
     response_json = response.json()
-    print(f"✅ API 响应成功！完整响应结构：{response_json.keys()}")
-    
-    # 检查是否有 choices
     if "choices" not in response_json or len(response_json["choices"]) == 0:
         print(f"❌ 响应中没有 choices！完整响应: {response_json}")
         return None
     
-    # 获取内容
-    try:
-        content = response_json["choices"][0]["message"]["content"].strip()
-    except (KeyError, IndexError) as e:
-        print(f"❌ 无法获取内容: {e}")
-        print(f"响应结构: {response_json}")
-        return None
+    content = response_json["choices"][0]["message"]["content"].strip()
     
-    print(f"📄 获取到内容，长度: {len(content)} 字符")
-    
-    # 清理 Markdown 标记
+    # 🌟 步骤 3: 清理 Markdown 标记
     content = content.replace("```json", "").replace("```", "").strip()
     
-    print(f"📄 清理后内容前 200 字符:\n{content[:200]}...")
-    
+    # 🌟 步骤 4: 强制修复 + 解析 (双重保险)
+    # 1. 找到最后一个 } 并截断，防止模型在后面啰嗦导致解析失败
+    last_brace = content.rfind("}")
+    if last_brace != -1:
+        content = content[:last_brace + 1]
+        
     try:
+        # 尝试直接解析
         return json.loads(content)
-    except json.JSONDecodeError as e:
-        print(f"❌ JSON 解析失败: {e}")
-        print(f"📄 完整内容前 1000 字符:\n{content[:1000]}")
-        return None
+    except json.JSONDecodeError:
+        try:
+            # 如果失败，尝试用 json_repair 自动修复
+            from json_repair import repair_json
+            fixed_content = repair_json(content)
+            return json.loads(fixed_content)
+        except Exception as e2:
+            print(f"❌ JSON 修复后依然解析失败: {e2}")
+            print(f"📄 内容末尾 300 字符:\n{content[-300:]}")
+            return None
 
 # ================= 4. Markdown 转 HTML 处理 =================
 def process_markdown_to_html(report_data):
