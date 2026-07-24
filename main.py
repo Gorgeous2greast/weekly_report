@@ -109,7 +109,7 @@ def generate_report_with_llm(papers):
 - 撰写 3-5 句话的执行摘要，概括本周最重要发现。
 
 # 输出 JSON 结构 (严格遵循，不要包含 ```json 等 Markdown 标记)
-{{
+{
   "report_date": "YYYY-MM-DD",
   "executive_summary": {
     "rl": "强化学习(RL)领域本周最重要发现（1-2句话）",
@@ -159,7 +159,7 @@ def generate_report_with_llm(papers):
   "top_papers": [
     {"title": "论文标题", "url": "链接", "reason": "推荐理由（2-3句话）"}
   ]
-}}
+}
 
 # 约束
 - ⚠️ 绝对真实性约束：所有「核心贡献」、「技术亮点」必须严格基于提供的 abstract/release note 原文总结，严禁编造任何未提及的实验数据、指标或结论！
