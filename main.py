@@ -232,6 +232,62 @@ def push_notification(page_url):
     requests.post(WEBHOOK_URL, json=payload)
     print("✅ 推送通知已发送")
 
+
+# ================= 新增：生成 Markdown 文件 =================
+def save_as_markdown(report_data):
+    os.makedirs("reports", exist_ok=True)
+    date_str = report_data.get("report_date", datetime.now().strftime("%Y-%m-%d"))
+    filename = f"reports/{date_str}.md"
+    
+    # 开始拼接 Markdown 内容
+    md_content = f"# 🤖 AI 前沿周报 - {date_str}\n\n"
+    
+    # 1. 执行摘要
+    md_content += "## 📌 执行摘要\n\n"
+    for item in report_data.get("executive_summary", []):
+        md_content += f"- {item}\n"
+    md_content += "\n"
+    
+    # 2. 跨领域洞察
+    if report_data.get("cross_insights"):
+        md_content += "## 💡 跨领域洞察\n\n"
+        for insight in report_data["cross_insights"]:
+            md_content += f"### {insight['title']}\n{insight['content']}\n\n"
+            
+    # 3. 论文赛道
+    for track in report_data.get("paper_tracks", []):
+        md_content += f"## ️ {track['track_name']}\n\n"
+        
+        if track.get("recommended"):
+            md_content += "### 🌟 强烈推荐\n\n"
+            for p in track["recommended"]:
+                md_content += f"#### [{p['title']}]({p['url']})\n\n"
+                md_content += f"**作者**: {p.get('authors', 'N/A')} | **发布**: {p.get('published', 'N/A')}\n\n"
+                md_content += f"{p.get('core_contribution', '')}\n\n"
+                if p.get('technical_highlights'):
+                    md_content += f"**技术亮点**: {p['technical_highlights']}\n\n"
+                md_content += f"**落地难度**: {p.get('difficulty', 'N/A')}\n\n---\n\n"
+                
+        if track.get("worth_knowing"):
+            md_content += "### 📖 值得知道\n\n"
+            for p in track["worth_knowing"]:
+                md_content += f"- **[{p['title']}]({p['url']})**: {p.get('one_line_summary', '')}\n"
+                if p.get('application_tip'):
+                    md_content += f"  - 💡 {p['application_tip']}\n"
+            md_content += "\n"
+            
+    # 4. Top Papers
+    if report_data.get("top_papers"):
+        md_content += "## 🏆 值得深入阅读的 Top Papers\n\n"
+        for i, p in enumerate(report_data["top_papers"], 1):
+            md_content += f"{i}. **[{p['title']}]({p['url']})**\n   > {p.get('reason', '')}\n\n"
+            
+    # 写入文件
+    with open(filename, "w", encoding="utf-8") as f:
+        f.write(md_content)
+    print(f"✅ Markdown 周报已保存: {filename}")
+    return filename
+    
 # ================= 主流程 =================
 if __name__ == "__main__":
     print("1. 正在获取最新论文数据...")
@@ -245,6 +301,10 @@ if __name__ == "__main__":
         print("3. 正在处理 Markdown 格式并渲染精美 HTML...")
         clean_data = process_markdown_to_html(report_data)
         render_html(clean_data)
+
+        #  新增：同时生成 Markdown 文件
+        print("4. 正在生成 Markdown 归档文件...")
+        save_as_markdown(report_data)
         
         # 注意：这里的 URL 需要替换为你实际的 GitHub Pages 地址
         # 格式通常为: https://<你的GitHub用户名>.github.io/<你的仓库名>/
