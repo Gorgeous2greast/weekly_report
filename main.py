@@ -54,7 +54,28 @@ def fetch_papers():
                 "categories": "cs.AI, cs.LG", 
                 "topic": "RL & Agentic Training"
             })
-            
+
+    # 🌟 新增：抓取训练框架的最新动态 (满足带教要求)
+    github_repos = ["volcengine/verl", "modelscope/ms-swift"]
+    for repo in github_repos:
+        try:
+            gh_url = f"https://api.github.com/repos/{repo}/releases/latest"
+            gh_resp = requests.get(gh_url, timeout=5)
+            if gh_resp.status_code == 200:
+                release = gh_resp.json()
+                filtered.append({
+                    "index": len(filtered) + 1,
+                    "title": f"[Framework Update] {repo} Latest Release: {release.get('name', 'Unknown')}",
+                    "url": release.get('html_url', f"https://github.com/{repo}"),
+                    "authors": repo,
+                    "abstract": f"Release Note: {release.get('body', 'No description')[:1000]}", # 截取前1000字
+                    "published": release.get('published_at', '')[:10],
+                    "categories": "Framework, GitHub",
+                    "topic": "Framework Updates" # 特殊标记
+                })
+        except Exception:
+            pass # 如果网络超时或无 release，静默跳过
+    
     return filtered
 
 # ================= 3. 调用大模型 (融合打分与报告生成) =================
@@ -89,49 +110,63 @@ def generate_report_with_llm(papers):
 
 # 输出 JSON 结构 (严格遵循，不要包含 ```json 等 Markdown 标记)
 {{
-  "report_date": "{datetime.now().strftime('%Y-%m-%d')}",
-  "executive_summary": ["本周最重要发现1（2-3句话）", "发现2", "发现3"],
+  "report_date": "YYYY-MM-DD",
+  "executive_summary": {
+    "rl": "强化学习(RL)领域本周最重要发现（1-2句话）",
+    "agentic_rl": "Agentic RL / Coding Agent 领域本周最重要发现（1-2句话）",
+    "llm_training": "LLM 训练/对齐领域本周最重要发现（1-2句话）",
+    "framework_updates": "训练框架（如 verl, ms-swift）本周 GitHub 最新动态总结（1-2句话）"
+  },
   "cross_insights": [
-    {{"title": "洞察标题", "content": "洞察详细描述"}}
+    {"title": "洞察标题", "content": "洞察详细描述"}
   ],
   "paper_tracks": [
-    {{
+    {
       "track_name": "强化学习（RL）与 Agentic 训练",
       "recommended": [
-        {{
+        {
           "title": "论文标题",
           "url": "链接",
           "authors": "作者信息",
           "published": "发布日期",
           "total_score": 85,
-          "core_contribution": "核心贡献详述（问题→方法→结果，可使用 <br> 换行）",
+          "score_breakdown": {
+            "institution_authority": 25,
+            "keyword_relevance": 28,
+            "timeliness": 18,
+            "category_match": 8,
+            "title_heat": 6
+          },
+          "core_contribution": "核心贡献详述（问题→方法→结果，严格基于原文，严禁编造数据）",
           "technical_highlights": "技术亮点",
           "differentiation": "与现有工作的差异",
           "code_availability": "代码/复现信息",
           "application_direction": "落地方向",
           "difficulty": "Low"
-        }}
+        }
       ],
       "worth_knowing": [
-        {{
+        {
           "title": "论文标题",
           "url": "链接",
           "one_line_summary": "一句话总结",
           "highlights": "亮点",
           "application_tip": "落地提示"
-        }}
+        }
       ]
-    }}
+    }
   ],
   "top_papers": [
-    {{"title": "论文标题", "url": "链接", "reason": "推荐理由（2-3句话说明为什么值得深入阅读）"}}
+    {"title": "论文标题", "url": "链接", "reason": "推荐理由（2-3句话）"}
   ]
 }}
 
 # 约束
-- 每篇论文的「核心贡献」控制在 100 字以内
-- 「值得知道」部分只保留「一句话总结」和「亮点」
-- 如果论文超过 10 篇，优先保证「强烈推荐」部分的完整性
+- ⚠️ 绝对真实性约束：所有「核心贡献」、「技术亮点」必须严格基于提供的 abstract/release note 原文总结，严禁编造任何未提及的实验数据、指标或结论！
+- 每篇论文的「核心贡献」控制在 100-150 字以内。
+- 「值得知道」部分只保留「一句话总结」和「亮点」。
+- 如果论文超过 10 篇，优先保证「强烈推荐」部分的完整性。
+- 仅返回纯 JSON，绝对不要包含 ```json 等 Markdown 标记。
 
 # 待分析论文列表：
 {papers_text}
@@ -239,14 +274,15 @@ def save_as_markdown(report_data):
     date_str = report_data.get("report_date", datetime.now().strftime("%Y-%m-%d"))
     filename = f"reports/{date_str}.md"
     
-    # 开始拼接 Markdown 内容
     md_content = f"# 🤖 AI 前沿周报 - {date_str}\n\n"
     
-    # 1. 执行摘要
+    # 1. 执行摘要 (严格按 4 个固定维度)
     md_content += "## 📌 执行摘要\n\n"
-    for item in report_data.get("executive_summary", []):
-        md_content += f"- {item}\n"
-    md_content += "\n"
+    summary = report_data.get("executive_summary", {})
+    md_content += f"- 🧠 **强化学习 (RL)**: {summary.get('rl', '本周无显著更新')}\n"
+    md_content += f"- 🤖 **Agentic RL / Coding Agent**: {summary.get('agentic_rl', '本周无显著更新')}\n"
+    md_content += f"- 🏋️ **LLM 训练/对齐**: {summary.get('llm_training', '本周无显著更新')}\n"
+    md_content += f"- 🛠️ **训练框架动态**: {summary.get('framework_updates', '本周无显著更新')}\n\n"
     
     # 2. 跨领域洞察
     if report_data.get("cross_insights"):
@@ -256,13 +292,18 @@ def save_as_markdown(report_data):
             
     # 3. 论文赛道
     for track in report_data.get("paper_tracks", []):
-        md_content += f"## ️ {track['track_name']}\n\n"
+        md_content += f"## 📚 {track['track_name']}\n\n"
         
         if track.get("recommended"):
             md_content += "### 🌟 强烈推荐\n\n"
             for p in track["recommended"]:
                 md_content += f"#### [{p['title']}]({p['url']})\n\n"
                 md_content += f"**作者**: {p.get('authors', 'N/A')} | **发布**: {p.get('published', 'N/A')}\n\n"
+                
+                # 🌟 新增：5 维评分小字展示
+                sb = p.get("score_breakdown", {})
+                md_content += f"*<sub>📊 评分明细: 权威 {sb.get('institution_authority', '-')} | 相关 {sb.get('keyword_relevance', '-')} | 时效 {sb.get('timeliness', '-')} | 分类 {sb.get('category_match', '-')} | 热度 {sb.get('title_heat', '-')} ➔ **总分: {p.get('total_score', 'N/A')}</sub>*\n\n"
+                
                 md_content += f"{p.get('core_contribution', '')}\n\n"
                 if p.get('technical_highlights'):
                     md_content += f"**技术亮点**: {p['technical_highlights']}\n\n"
@@ -282,7 +323,6 @@ def save_as_markdown(report_data):
         for i, p in enumerate(report_data["top_papers"], 1):
             md_content += f"{i}. **[{p['title']}]({p['url']})**\n   > {p.get('reason', '')}\n\n"
             
-    # 写入文件
     with open(filename, "w", encoding="utf-8") as f:
         f.write(md_content)
     print(f"✅ Markdown 周报已保存: {filename}")
