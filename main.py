@@ -148,16 +148,35 @@ def generate_report_with_llm(papers):
     response = requests.post(f"{LLM_BASE_URL}/chat/completions", headers=headers, json=payload)
     response.raise_for_status()
     
-    # 清理并解析 JSON
-    content = response.json()["choices"][0]["message"]["content"].strip()
+    # 🔍 调试：打印完整响应
+    response_json = response.json()
+    print(f"✅ API 响应成功！完整响应结构：{response_json.keys()}")
+    
+    # 检查是否有 choices
+    if "choices" not in response_json or len(response_json["choices"]) == 0:
+        print(f"❌ 响应中没有 choices！完整响应: {response_json}")
+        return None
+    
+    # 获取内容
+    try:
+        content = response_json["choices"][0]["message"]["content"].strip()
+    except (KeyError, IndexError) as e:
+        print(f"❌ 无法获取内容: {e}")
+        print(f"响应结构: {response_json}")
+        return None
+    
+    print(f"📄 获取到内容，长度: {len(content)} 字符")
+    
+    # 清理 Markdown 标记
     content = content.replace("```json", "").replace("```", "").strip()
+    
+    print(f"📄 清理后内容前 200 字符:\n{content[:200]}...")
     
     try:
         return json.loads(content)
     except json.JSONDecodeError as e:
         print(f"❌ JSON 解析失败: {e}")
-        print(f"📄 原始内容前 1000 字符:\n{content[:1000]}")
-        print(f"📄 原始内容后 500 字符:\n{content[-500:]}")
+        print(f"📄 完整内容前 1000 字符:\n{content[:1000]}")
         return None
 
 # ================= 4. Markdown 转 HTML 处理 =================
