@@ -15,7 +15,6 @@ WEBHOOK_URL = os.getenv("WEBHOOK_URL", "")
 def fetch_papers():
     """
     这里使用 HuggingFace Daily Papers API 作为示例。
-    你可以随时替换为你在 Coze 中使用的 arXiv API 逻辑。
     """
     url = "https://huggingface.co/api/daily_papers"
     response = requests.get(url)
@@ -24,22 +23,38 @@ def fetch_papers():
     # 简单过滤：只保留标题或摘要包含关键词的论文
     keywords = ["rl", "reinforcement", "agent", "agentic", "training", "ppo", "grpo", "rlhf"]
     filtered = []
+    
     for item in papers[:30]: # 取前30篇进行深度评分
         paper = item.get("paper", {})
         title = paper.get("title", "").lower()
         summary = paper.get("summary", "").lower()
         
         if any(kw in title or kw in summary for kw in keywords):
+            # 🌟 步骤 1: 先在外面处理好 authors 字符串
+            authors_list = paper.get("authors", [])
+            if authors_list and isinstance(authors_list[0], dict):
+                # 如果是字典列表，提取 name 字段
+                author_names = [a.get("name", "") for a in authors_list if isinstance(a, dict)]
+            else:
+                # 如果是字符串列表，直接使用
+                author_names = [a for a in authors_list if isinstance(a, str)]
+            
+            authors_str = ", ".join(author_names[:3])
+            if len(author_names) > 3:
+                authors_str += " et al."
+            
+            # 🌟 步骤 2: 将处理好的字符串放入字典中
             filtered.append({
                 "index": len(filtered) + 1,
                 "title": paper.get("title"),
                 "url": f"https://huggingface.co/papers/{paper.get('id')}",
-                "authors": ", ".join(paper.get("authors", [])[:3]) + (" et al." if len(paper.get("authors", [])) > 3 else ""),
+                "authors": authors_str,  # 直接使用处理好的变量
                 "abstract": paper.get("summary"),
                 "published": paper.get("publishedAt", "")[:10],
-                "categories": "cs.AI, cs.LG", # HF API 不直接返回 arxiv categories，这里做占位
+                "categories": "cs.AI, cs.LG", 
                 "topic": "RL & Agentic Training"
             })
+            
     return filtered
 
 # ================= 3. 调用大模型 (融合打分与报告生成) =================
