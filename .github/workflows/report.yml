@@ -47,3 +47,12 @@ jobs:
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
+        
+      # 🌟 新增：将生成的 Markdown 文件 Commit 回仓库
+      - name: Commit Markdown Report to Repo
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          git add reports/
+          git commit -m "Add weekly report $(date +%Y-%m-%d)" || echo "No changes to commit"
+          git push
