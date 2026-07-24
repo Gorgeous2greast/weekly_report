@@ -24,7 +24,7 @@ def fetch_papers():
     keywords = ["rl", "reinforcement", "agent", "agentic", "training", "ppo", "grpo", "rlhf"]
     filtered = []
     
-    for item in papers[:30]: # 取前30篇进行深度评分
+    for item in papers[:5]: # 取前30篇进行深度评分
         paper = item.get("paper", {})
         title = paper.get("title", "").lower()
         summary = paper.get("summary", "").lower()
