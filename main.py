@@ -24,7 +24,7 @@ def fetch_papers():
     keywords = ["rl", "reinforcement", "agent", "agentic", "training", "ppo", "grpo", "rlhf"]
     filtered = []
     
-    for item in papers[:5]: # 取前30篇进行深度评分
+    for item in papers[:30]: # 取前30篇进行深度评分
         paper = item.get("paper", {})
         title = paper.get("title", "").lower()
         summary = paper.get("summary", "").lower()
@@ -129,9 +129,9 @@ def generate_report_with_llm(papers):
 }}
 
 # 约束
-- 仅返回纯 JSON，绝对不要包含其他文本或 Markdown 代码块标记。
-- 评分要客观严格，体现区分度。
-- 论文分析要专业、具体、有技术深度。
+- 每篇论文的「核心贡献」控制在 100 字以内
+- 「值得知道」部分只保留「一句话总结」和「亮点」
+- 如果论文超过 10 篇，优先保证「强烈推荐」部分的完整性
 
 # 待分析论文列表：
 {papers_text}
@@ -142,7 +142,7 @@ def generate_report_with_llm(papers):
         "model": LLM_MODEL,
         "messages": [{"role": "user", "content": prompt}],
         "temperature": 0.2,
-        "max_tokens": 4000
+        "max_tokens": 16000
     }
     
     response = requests.post(f"{LLM_BASE_URL}/chat/completions", headers=headers, json=payload)
