@@ -103,7 +103,7 @@ def generate_report_with_llm(papers):
   ],
   "paper_tracks": [
     {
-      "track_name": "强化学习与 LLM 训练算法 (RL, RLHF, Alignment, Distillation)",
+      "track_name": "🧠 强化学习 (RL)",
       "recommended": [
         {
           "title": "论文标题",
@@ -118,7 +118,7 @@ def generate_report_with_llm(papers):
             "category_match": 8,
             "title_heat": 6
           },
-          "core_contribution": "核心贡献详述（问题→方法→结果，严格基于原文，严禁编造数据）",
+          "core_contribution": "核心贡献详述（问题→方法→结果，严格基于原文）",
           "technical_highlights": "技术亮点",
           "differentiation": "与现有工作的差异",
           "code_availability": "代码/复现信息",
@@ -137,7 +137,7 @@ def generate_report_with_llm(papers):
       ]
     },
     {
-      "track_name": "Agentic 系统与前沿评测 (Coding Agent, 多模态, Benchmark)",
+      "track_name": "🤖 Agentic RL / Coding Agent",
       "recommended": [
         {
           "title": "论文标题",
@@ -152,7 +152,7 @@ def generate_report_with_llm(papers):
             "category_match": 8,
             "title_heat": 6
           },
-          "core_contribution": "核心贡献详述（问题→方法→结果，严格基于原文，严禁编造数据）",
+          "core_contribution": "核心贡献详述（问题→方法→结果，严格基于原文）",
           "technical_highlights": "技术亮点",
           "differentiation": "与现有工作的差异",
           "code_availability": "代码/复现信息",
@@ -169,6 +169,66 @@ def generate_report_with_llm(papers):
           "application_tip": "落地提示"
         }
       ]
+    },
+    {
+      "track_name": "🏋️ LLM 训练/对齐",
+      "recommended": [
+        {
+          "title": "论文标题",
+          "url": "链接",
+          "authors": "作者信息",
+          "published": "发布日期",
+          "total_score": 85,
+          "score_breakdown": {
+            "institution_authority": 25,
+            "keyword_relevance": 28,
+            "timeliness": 18,
+            "category_match": 8,
+            "title_heat": 6
+          },
+          "core_contribution": "核心贡献详述（问题→方法→结果，严格基于原文）",
+          "technical_highlights": "技术亮点",
+          "differentiation": "与现有工作的差异",
+          "code_availability": "代码/复现信息",
+          "application_direction": "落地方向",
+          "difficulty": "Low"
+        }
+      ],
+      "worth_knowing": [
+        {
+          "title": "论文标题",
+          "url": "链接",
+          "one_line_summary": "一句话总结",
+          "highlights": "亮点",
+          "application_tip": "落地提示"
+        }
+      ]
+    },
+    {
+      "track_name": "🛠️ 训练框架动态",
+      "recommended": [
+        {
+          "title": "框架名称及版本 (如: volcengine/verl v0.8.0)",
+          "url": "GitHub Release 链接",
+          "authors": "N/A",
+          "published": "发布日期",
+          "total_score": "N/A",
+          "score_breakdown": {
+            "institution_authority": "N/A",
+            "keyword_relevance": "N/A",
+            "timeliness": "N/A",
+            "category_match": "N/A",
+            "title_heat": "N/A"
+          },
+          "core_contribution": "核心更新内容总结（1-2句话）",
+          "technical_highlights": "重要新特性",
+          "differentiation": "N/A",
+          "code_availability": "N/A",
+          "application_direction": "N/A",
+          "difficulty": "N/A"
+        }
+      ],
+      "worth_knowing": []
     }
   ],
   "top_papers": [
@@ -197,8 +257,9 @@ def generate_report_with_llm(papers):
 5. 标题热度信号(10分): 含突破性关键词=8-10；有一定吸引力=4-7
 
 # 筛选与分析规则
-- 按总分降序排列，选出Top 6-10篇**学术论文**。
-- 将选中论文分为「强烈推荐」(Top 3-5) 和「值得知道」(其余) 两个等级，并根据研究内容，合理分配到 "强化学习与 LLM 训练算法" 或 "Agentic 系统与前沿评测" 这两个赛道中。
+- 对**学术论文**进行5维度评分，按总分降序排列，选出Top 10-12篇。
+- 将选中的学术论文合理分配到前 3 个赛道（"🧠 强化学习 (RL)", "🤖 Agentic RL / Coding Agent", "🏋️ LLM 训练/对齐"）的「强烈推荐」或「值得知道」中。
+- 将类型为 [Framework Update] 的条目放入第 4 个赛道（"🛠️ 训练框架动态"）的「强烈推荐」中。框架更新不参与学术评分，相关评分字段请统一填 "N/A"，仅需总结核心更新内容。
 - 提炼跨领域洞察（识别不同研究方向之间的关联）。
 - 撰写执行摘要，分别概括上述4个领域的本周最重要发现。
 
@@ -344,9 +405,12 @@ def save_as_markdown(report_data):
                 md_content += f"#### [{p['title']}]({p['url']})\n\n"
                 md_content += f"**作者**: {p.get('authors', 'N/A')} | **发布**: {p.get('published', 'N/A')}\n\n"
                 
-                # 🌟 新增：5 维评分小字展示
+                # 🌟 优化：对框架更新（评分为 N/A）进行特殊优雅展示
                 sb = p.get("score_breakdown", {})
-                md_content += f"*<sub>📊 评分明细: 权威 {sb.get('institution_authority', '-')} | 相关 {sb.get('keyword_relevance', '-')} | 时效 {sb.get('timeliness', '-')} | 分类 {sb.get('category_match', '-')} | 热度 {sb.get('title_heat', '-')} ➔ **总分: {p.get('total_score', 'N/A')}</sub>*\n\n"
+                if isinstance(sb.get('institution_authority'), str) and sb.get('institution_authority') == 'N/A':
+                    md_content += f"*<sub>📊 框架更新，不参与学术评分</sub>*\n\n"
+                else:
+                    md_content += f"*<sub>📊 评分明细: 权威 {sb.get('institution_authority', '-')} | 相关 {sb.get('keyword_relevance', '-')} | 时效 {sb.get('timeliness', '-')} | 分类 {sb.get('category_match', '-')} | 热度 {sb.get('title_heat', '-')} ➔ **总分: {p.get('total_score', 'N/A')}</sub>*\n\n"
                 
                 md_content += f"{p.get('core_contribution', '')}\n\n"
                 if p.get('technical_highlights'):
