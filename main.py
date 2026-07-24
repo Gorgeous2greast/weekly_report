@@ -155,7 +155,9 @@ def generate_report_with_llm(papers):
     try:
         return json.loads(content)
     except json.JSONDecodeError as e:
-        print(f"JSON 解析失败: {e}\n原始内容: {content[:500]}...")
+        print(f"❌ JSON 解析失败: {e}")
+        print(f"📄 原始内容前 1000 字符:\n{content[:1000]}")
+        print(f"📄 原始内容后 500 字符:\n{content[-500:]}")
         return None
 
 # ================= 4. Markdown 转 HTML 处理 =================
