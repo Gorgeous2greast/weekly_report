@@ -83,6 +83,9 @@ def generate_report_with_llm(papers):
     if not papers:
         return None
 
+    # 🌟 修复 1: 获取当天的真实日期
+    current_date = datetime.now().strftime("%Y-%m-%d")
+    
     # 将论文列表格式化为 Prompt 输入
     papers_text = ""
     for p in papers:
@@ -91,7 +94,7 @@ def generate_report_with_llm(papers):
     # 🌟 步骤 1: 提取 JSON 模板为普通字符串 (使用单层花括号，避免 f-string 嵌套报错)
     json_template = """
 {
-  "report_date": "YYYY-MM-DD",
+  "report_date": "DATE_PLACEHOLDER",
   "executive_summary": {
     "rl": "强化学习(RL)领域本周最重要发现（1-2句话）",
     "agentic_rl": "Agentic RL / Coding Agent 领域本周最重要发现（1-2句话）",
@@ -237,6 +240,9 @@ def generate_report_with_llm(papers):
 }
 """
 
+    # 🌟 动态替换日期
+    json_template = json_template.replace("DATE_PLACEHOLDER", current_date)
+    
     # 🌟 步骤 2: 使用 f-string 组装最终 Prompt
     prompt = f"""# 角色定义
 你是AI前沿论文评审专家兼周报编辑，专注于以下领域：
@@ -296,27 +302,26 @@ def generate_report_with_llm(papers):
     
     content = response_json["choices"][0]["message"]["content"].strip()
     
-    # 🌟 步骤 3: 清理 Markdown 标记
+    # 🌟 步骤 4: 智能修复 + 解析 (防止误杀 top_papers)
+    # 1. 清理 Markdown 标记
     content = content.replace("```json", "").replace("```", "").strip()
     
-    # 🌟 步骤 4: 强制修复 + 解析 (双重保险)
-    # 1. 找到最后一个 } 并截断，防止模型在后面啰嗦导致解析失败
-    last_brace = content.rfind("}")
-    if last_brace != -1:
-        content = content[:last_brace + 1]
+    # 2. 检查是否包含 top_papers，如果不包含，尝试让 json_repair 补全
+    if '"top_papers"' not in content:
+        print("⚠️ 检测到模型可能遗漏了 top_papers，尝试强制修复...")
         
     try:
-        # 尝试直接解析
+        # 优先尝试直接解析
         return json.loads(content)
     except json.JSONDecodeError:
         try:
-            # 如果失败，尝试用 json_repair 自动修复
+            # 如果失败，使用 json_repair 自动修复（它能智能补全缺失的括号和字段）
             from json_repair import repair_json
             fixed_content = repair_json(content)
             return json.loads(fixed_content)
         except Exception as e2:
             print(f"❌ JSON 修复后依然解析失败: {e2}")
-            print(f"📄 内容末尾 300 字符:\n{content[-300:]}")
+            print(f"📄 内容末尾 500 字符:\n{content[-500:]}")
             return None
 
 # ================= 4. Markdown 转 HTML 处理 =================
