@@ -2,7 +2,7 @@ import os
 import json
 import requests
 import markdown
-from datetime import datetime, timedelta
+from datetime import datetime
 from jinja2 import Environment, FileSystemLoader
 
 # ================= 1. 配置区 =================
@@ -10,91 +10,90 @@ LLM_API_KEY = os.getenv("LLM_API_KEY")
 LLM_BASE_URL = os.getenv("LLM_BASE_URL", "https://api.deepseek.com/v1")
 LLM_MODEL = os.getenv("LLM_MODEL", "deepseek-chat")
 
-# ================= 2. 主动定向检索论文 (arXiv API - 原生 requests) =================
-import xml.etree.ElementTree as ET
-
+# ================= 2. 获取论文数据 (复用 HF API，但过滤更精准) =================
 def fetch_specialized_papers():
     """
-    使用 arXiv API 定向检索 Agentic RL 动态检索与奖励优化相关论文
+    使用 HuggingFace Daily Papers API，但精准过滤 Agentic Retrieval & Reward 相关论文
     """
-    # arXiv 搜索语法：https://info.arxiv.org/help/api/search-query.html
-    # all: 搜索标题和摘要
-    search_query = (
-        "all:(agentic OR \"reinforcement learning\" OR rlhf) "
-        "AND all:(retrieval OR rag OR \"dynamic search\") "
-        "AND all:(reward OR optimization OR shaping)"
-    )
+    url = "https://huggingface.co/api/daily_papers"
+    response = requests.get(url, timeout=10)
+    papers = response.json()
     
-    # 构造 API URL
-    url = f"http://export.arxiv.org/api/query?search_query={search_query}&start=0&max_results=15&sortBy=relevance&sortOrder=descending"
+    #  精准关键词：必须同时包含 (Agentic/RL) + (Retrieval/RAG) + (Reward/Optimization)
+    # 或者标题/摘要中明确提到这些组合
+    filtered = []
     
-    try:
-        response = requests.get(url, timeout=10)
-        response.raise_for_status()
+    for item in papers[:50]:  # 多看一些，取前 50 篇
+        paper = item.get("paper", {})
+        title = paper.get("title", "").lower()
+        summary = paper.get("summary", "").lower()
         
-        # 解析 XML
-        root = ET.fromstring(response.content)
+        # 组合关键词检查
+        has_agent_rl = any(kw in title or kw in summary for kw in ["agentic", "reinforcement learning", "rlhf", "ppo", "grpo"])
+        has_retrieval = any(kw in title or kw in summary for kw in ["retrieval", "rag", "search", "dynamic retrieval"])
+        has_reward = any(kw in title or kw in summary for kw in ["reward", "optimization", "shaping", "preference"])
         
-        # arXiv Atom 命名空间
-        ns = {
-            'atom': 'http://www.w3.org/2005/Atom',
-            'arxiv': 'http://arxiv.org/schemas/atom'
-        }
-        
-        filtered = []
-        entries = root.findall('atom:entry', ns)
-        
-        for idx, entry in enumerate(entries):
-            # 提取标题
-            title_elem = entry.find('atom:title', ns)
-            title = title_elem.text.strip() if title_elem is not None else "Unknown"
+        # 必须同时满足：有 RL/Agent + 有 Retrieval + 有 Reward/Optimization
+        if has_agent_rl and has_retrieval and has_reward:
+            # 处理作者
+            authors_list = paper.get("authors", [])
+            if authors_list and isinstance(authors_list[0], dict):
+                author_names = [a.get("name", "") for a in authors_list if isinstance(a, dict)]
+            else:
+                author_names = [a for a in authors_list if isinstance(a, str)]
             
-            # 提取摘要
-            summary_elem = entry.find('atom:summary', ns)
-            abstract = summary_elem.text.strip() if summary_elem is not None else ""
-            
-            if not abstract:
-                continue
-            
-            # 提取作者
-            authors = []
-            for author_elem in entry.findall('atom:author', ns):
-                name_elem = author_elem.find('atom:name', ns)
-                if name_elem is not None:
-                    authors.append(name_elem.text)
-            authors_str = ", ".join(authors[:3]) + " et al." if len(authors) > 3 else ", ".join(authors)
-            
-            # 提取发布日期
-            published_elem = entry.find('atom:published', ns)
-            published = published_elem.text[:10] if published_elem is not None else "Unknown"
-            
-            # 提取链接
-            link_elem = entry.find('atom:id', ns)
-            url = link_elem.text if link_elem is not None else ""
-            
-            # 提取分类
-            categories = []
-            for term_elem in entry.findall('atom:category', ns):
-                term = term_elem.get('term')
-                if term:
-                    categories.append(term)
+            authors_str = ", ".join(author_names[:3])
+            if len(author_names) > 3:
+                authors_str += " et al."
             
             filtered.append({
-                "index": idx + 1,
-                "title": title,
-                "url": url,
+                "index": len(filtered) + 1,
+                "title": paper.get("title"),
+                "url": f"https://huggingface.co/papers/{paper.get('id')}",
                 "authors": authors_str,
-                "abstract": abstract,
-                "published": published,
-                "categories": ", ".join(categories),
+                "abstract": paper.get("summary"),
+                "published": paper.get("publishedAt", "")[:10],
+                "categories": "cs.AI, cs.LG",
                 "topic": "Agentic Retrieval & Reward Optimization"
             })
+    
+    # 如果 HF 没有找到足够的论文，补充一些经典关键词放宽搜索
+    if len(filtered) < 5:
+        print("⚠️ HF 找到论文较少，放宽关键词重新搜索...")
+        for item in papers[:50]:
+            paper = item.get("paper", {})
+            title = paper.get("title", "").lower()
+            summary = paper.get("summary", "").lower()
             
-        return filtered
-        
-    except Exception as e:
-        print(f"❌ arXiv 检索失败: {e}")
-        return []
+            # 放宽条件：只要有 (Agent/RL) 和 (Retrieval/RAG) 即可
+            if any(kw in title or kw in summary for kw in ["agentic", "rl", "rlhf"]) and \
+               any(kw in title or kw in summary for kw in ["retrieval", "rag", "search"]):
+                
+                # 避免重复
+                if not any(p["url"] == f"https://huggingface.co/papers/{paper.get('id')}" for p in filtered):
+                    authors_list = paper.get("authors", [])
+                    if authors_list and isinstance(authors_list[0], dict):
+                        author_names = [a.get("name", "") for a in authors_list if isinstance(a, dict)]
+                    else:
+                        author_names = [a for a in authors_list if isinstance(a, str)]
+                    
+                    authors_str = ", ".join(author_names[:3])
+                    if len(author_names) > 3:
+                        authors_str += " et al."
+                    
+                    filtered.append({
+                        "index": len(filtered) + 1,
+                        "title": paper.get("title"),
+                        "url": f"https://huggingface.co/papers/{paper.get('id')}",
+                        "authors": authors_str,
+                        "abstract": paper.get("summary"),
+                        "published": paper.get("publishedAt", "")[:10],
+                        "categories": "cs.AI, cs.LG",
+                        "topic": "Agentic Retrieval & Reward Optimization"
+                    })
+    
+    return filtered[:15]  # 最多返回 15 篇
+
 # ================= 3. 调用大模型进行深度思路提取 =================
 def analyze_reward_strategies(papers):
     if not papers:
@@ -102,14 +101,14 @@ def analyze_reward_strategies(papers):
 
     papers_text = ""
     for p in papers:
-        papers_text += f"论文{p['index']}：\n- 标题：{p['title']}\n- 链接：{p['url']}\n- 摘要：{p['abstract']}\n- 引用数：{p['citations']}\n\n"
+        papers_text += f"论文{p['index']}：\n- 标题：{p['title']}\n- 链接：{p['url']}\n- 摘要：{p['abstract']}\n\n"
 
     # 🌟 专项定制 Prompt：聚焦奖励函数与动态检索优化
     prompt = f"""# 角色定义
 你是 Agentic RL 与 Reward Shaping 领域的顶级研究员。当前团队的核心痛点是：**如何优化大模型在自主动态检索 (Dynamic Retrieval / Agentic Search) 过程中的奖励函数 (Reward Function)**。
 
 # 任务目标
-阅读提供的论文列表，深度挖掘其中关于“检索策略优化”、“奖励函数设计”、“动态反馈机制”的新思路，并输出结构化的调研洞察报告。
+阅读提供的论文列表，深度挖掘其中关于"检索策略优化"、"奖励函数设计"、"动态反馈机制"的新思路，并输出结构化的调研洞察报告。
 
 # 分析维度 (请在总结中重点关注)
 1. **Reward Formulation**：论文是如何设计奖励信号的？(如：稀疏/稠密奖励、过程奖励 Process Reward、基于信息增益的奖励、基于不确定性的惩罚等)。
@@ -118,7 +117,7 @@ def analyze_reward_strategies(papers):
 
 # 输出 JSON 结构 (严格遵循，不要包含 ```json 标记)
 {{
-  "research_date": "DATE_PLACEHOLDER",
+  "research_date": "{datetime.now().strftime('%Y-%m-%d')}",
   "core_paradigms": [
     {{
       "paradigm_name": "研究范式名称 (如：基于过程奖励的检索步长控制)",
@@ -149,16 +148,12 @@ def analyze_reward_strategies(papers):
 # 待分析论文列表：
 {papers_text}
 """
-    
-    # 动态替换日期
-    current_date = datetime.now().strftime("%Y-%m-%d")
-    prompt = prompt.replace("DATE_PLACEHOLDER", current_date)
 
     headers = {"Authorization": f"Bearer {LLM_API_KEY}", "Content-Type": "application/json"}
     payload = {
         "model": LLM_MODEL,
         "messages": [{"role": "user", "content": prompt}],
-        "temperature": 0.1, # 调研任务需要更低的温度以保证严谨性
+        "temperature": 0.1,
         "max_tokens": 8000
     }
     
@@ -168,7 +163,6 @@ def analyze_reward_strategies(papers):
     content = response.json()["choices"][0]["message"]["content"].strip()
     content = content.replace("```json", "").replace("```", "").strip()
     
-    # 强制修复逻辑 (复用之前的稳健方案)
     try:
         return json.loads(content)
     except json.JSONDecodeError:
@@ -176,7 +170,7 @@ def analyze_reward_strategies(papers):
             from json_repair import repair_json
             return json.loads(repair_json(content))
         except Exception as e2:
-            print(f"❌ JSON 解析失败: {e2}\n末尾内容: {content[-300:]}")
+            print(f" JSON 解析失败: {e2}\n末尾内容: {content[-300:]}")
             return None
 
 # ================= 4. 渲染专项调研 Markdown 报告 =================
@@ -185,7 +179,7 @@ def save_research_report(report_data):
     date_str = report_data.get("research_date", datetime.now().strftime("%Y-%m-%d"))
     filename = f"research_reports/Agentic_Retrieval_Reward_{date_str}.md"
     
-    md = f"# 🔬 Agentic RL 动态检索奖励优化专项调研 - {date_str}\n\n"
+    md = f"#  Agentic RL 动态检索奖励优化专项调研 - {date_str}\n\n"
     
     # 1. 核心研究范式
     md += "## 🧠 核心研究范式 (Core Paradigms)\n\n"
@@ -215,7 +209,7 @@ def save_research_report(report_data):
 
 # ================= 主流程 =================
 if __name__ == "__main__":
-    print("1. 正在 Semantic Scholar 定向检索 Agentic Retrieval & Reward 论文...")
+    print("1. 正在 HuggingFace 定向检索 Agentic Retrieval & Reward 论文...")
     papers = fetch_specialized_papers()
     print(f"   找到 {len(papers)} 篇高度相关论文。")
     
