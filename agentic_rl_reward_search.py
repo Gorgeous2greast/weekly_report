@@ -10,43 +10,55 @@ LLM_API_KEY = os.getenv("LLM_API_KEY")
 LLM_BASE_URL = os.getenv("LLM_BASE_URL", "https://api.deepseek.com/v1")
 LLM_MODEL = os.getenv("LLM_MODEL", "deepseek-chat")
 
-# ================= 2. 主动定向检索论文 (Semantic Scholar API) =================
+# ================= 2. 主动定向检索论文 (arXiv API) =================
+import arxiv
+
 def fetch_specialized_papers():
     """
-    使用 Semantic Scholar API 定向检索 Agentic RL 动态检索与奖励优化相关论文
+    使用 arXiv API 定向检索 Agentic RL 动态检索与奖励优化相关论文
     """
-    # 构造高级布尔查询：(Agentic OR "Reinforcement Learning") AND (Retrieval OR Search) AND (Reward OR Optimization)
-    query = "(agentic OR \"reinforcement learning\" OR rlhf) AND (retrieval OR search OR rag) AND (reward OR optimization OR shaping)"
+    # 构造高级搜索查询：(Agentic OR RL) AND (Retrieval/RAG/Search) AND (Reward/Optimization)
+    # arXiv 搜索语法：ti:(title关键词) OR abs:(摘要关键词)
+    search_query = (
+        "all:agentic OR all:\"reinforcement learning\" OR all:rlhf"
+        " AND "
+        "(all:retrieval OR all:rag OR all:\"dynamic search\")"
+        " AND "
+        "(all:reward OR all:optimization OR all:shaping)"
+    )
     
-    # 检索过去 6 个月的论文，按引用量或相关性排序
-    url = f"https://api.semanticscholar.org/graph/v1/paper/search?query={query}&limit=20&fields=title,authors,abstract,publicationVenue,url,publicationDate,citationCount&year=2023-"
+    # 定义搜索器：按相关性排序，取最新 15 篇
+    search = arxiv.Search(
+        query=search_query,
+        max_results=15,
+        sort_by=arxiv.SortCriterion.Relevance,
+        sort_order=arxiv.SortOrder.Descending
+    )
     
-    headers = {"x-api-key": os.getenv("S2_API_KEY")} # 可选：如果有 S2 API key 可填入，无 key 也可匿名请求（有限流）
-    
+    filtered = []
     try:
-        response = requests.get(url, headers=headers, timeout=10)
-        response.raise_for_status()
-        data = response.json()
-        
-        filtered = []
-        for idx, item in enumerate(data.get("data", [])):
-            abstract = item.get("abstract", "")
-            if not abstract:
-                continue # 没有摘要的跳过
+        for idx, paper in enumerate(search.results()):
+            # 跳过没有摘要的
+            if not paper.summary:
+                continue
                 
             filtered.append({
                 "index": idx + 1,
-                "title": item.get("title", "Unknown Title"),
-                "url": item.get("url", ""),
-                "authors": ", ".join([a.get("name", "") for a in item.get("authors", [])[:3]]) + " et al.",
-                "abstract": abstract,
-                "published": item.get("publicationDate", "Unknown")[:10],
-                "citations": item.get("citationCount", 0),
+                "title": paper.title,
+                "url": paper.entry_id.replace("http://", "https://"), # 修复链接
+                "authors": ", ".join([a.name for a in paper.authors[:3]]) + " et al.",
+                "abstract": paper.summary,
+                "published": paper.published.strftime("%Y-%m-%d"),
+                "categories": ", ".join(paper.categories),
                 "topic": "Agentic Retrieval & Reward Optimization"
             })
+            
+            if len(filtered) >= 10: # 只要 Top 10 最相关的
+                break
+                
         return filtered
     except Exception as e:
-        print(f"❌ 检索失败: {e}")
+        print(f"❌ arXiv 检索失败: {e}")
         return []
 
 # ================= 3. 调用大模型进行深度思路提取 =================
