@@ -10,57 +10,91 @@ LLM_API_KEY = os.getenv("LLM_API_KEY")
 LLM_BASE_URL = os.getenv("LLM_BASE_URL", "https://api.deepseek.com/v1")
 LLM_MODEL = os.getenv("LLM_MODEL", "deepseek-chat")
 
-# ================= 2. 主动定向检索论文 (arXiv API) =================
-import arxiv
+# ================= 2. 主动定向检索论文 (arXiv API - 原生 requests) =================
+import xml.etree.ElementTree as ET
 
 def fetch_specialized_papers():
     """
     使用 arXiv API 定向检索 Agentic RL 动态检索与奖励优化相关论文
     """
-    # 构造高级搜索查询：(Agentic OR RL) AND (Retrieval/RAG/Search) AND (Reward/Optimization)
-    # arXiv 搜索语法：ti:(title关键词) OR abs:(摘要关键词)
+    # arXiv 搜索语法：https://info.arxiv.org/help/api/search-query.html
+    # all: 搜索标题和摘要
     search_query = (
-        "all:agentic OR all:\"reinforcement learning\" OR all:rlhf"
-        " AND "
-        "(all:retrieval OR all:rag OR all:\"dynamic search\")"
-        " AND "
-        "(all:reward OR all:optimization OR all:shaping)"
+        "all:(agentic OR \"reinforcement learning\" OR rlhf) "
+        "AND all:(retrieval OR rag OR \"dynamic search\") "
+        "AND all:(reward OR optimization OR shaping)"
     )
     
-    # 定义搜索器：按相关性排序，取最新 15 篇
-    search = arxiv.Search(
-        query=search_query,
-        max_results=15,
-        sort_by=arxiv.SortCriterion.Relevance,
-        sort_order=arxiv.SortOrder.Descending
-    )
+    # 构造 API URL
+    url = f"http://export.arxiv.org/api/query?search_query={search_query}&start=0&max_results=15&sortBy=relevance&sortOrder=descending"
     
-    filtered = []
     try:
-        for idx, paper in enumerate(search.results()):
-            # 跳过没有摘要的
-            if not paper.summary:
+        response = requests.get(url, timeout=10)
+        response.raise_for_status()
+        
+        # 解析 XML
+        root = ET.fromstring(response.content)
+        
+        # arXiv Atom 命名空间
+        ns = {
+            'atom': 'http://www.w3.org/2005/Atom',
+            'arxiv': 'http://arxiv.org/schemas/atom'
+        }
+        
+        filtered = []
+        entries = root.findall('atom:entry', ns)
+        
+        for idx, entry in enumerate(entries):
+            # 提取标题
+            title_elem = entry.find('atom:title', ns)
+            title = title_elem.text.strip() if title_elem is not None else "Unknown"
+            
+            # 提取摘要
+            summary_elem = entry.find('atom:summary', ns)
+            abstract = summary_elem.text.strip() if summary_elem is not None else ""
+            
+            if not abstract:
                 continue
-                
+            
+            # 提取作者
+            authors = []
+            for author_elem in entry.findall('atom:author', ns):
+                name_elem = author_elem.find('atom:name', ns)
+                if name_elem is not None:
+                    authors.append(name_elem.text)
+            authors_str = ", ".join(authors[:3]) + " et al." if len(authors) > 3 else ", ".join(authors)
+            
+            # 提取发布日期
+            published_elem = entry.find('atom:published', ns)
+            published = published_elem.text[:10] if published_elem is not None else "Unknown"
+            
+            # 提取链接
+            link_elem = entry.find('atom:id', ns)
+            url = link_elem.text if link_elem is not None else ""
+            
+            # 提取分类
+            categories = []
+            for term_elem in entry.findall('atom:category', ns):
+                term = term_elem.get('term')
+                if term:
+                    categories.append(term)
+            
             filtered.append({
                 "index": idx + 1,
-                "title": paper.title,
-                "url": paper.entry_id.replace("http://", "https://"), # 修复链接
-                "authors": ", ".join([a.name for a in paper.authors[:3]]) + " et al.",
-                "abstract": paper.summary,
-                "published": paper.published.strftime("%Y-%m-%d"),
-                "categories": ", ".join(paper.categories),
+                "title": title,
+                "url": url,
+                "authors": authors_str,
+                "abstract": abstract,
+                "published": published,
+                "categories": ", ".join(categories),
                 "topic": "Agentic Retrieval & Reward Optimization"
             })
             
-            if len(filtered) >= 10: # 只要 Top 10 最相关的
-                break
-                
         return filtered
+        
     except Exception as e:
         print(f"❌ arXiv 检索失败: {e}")
         return []
-
 # ================= 3. 调用大模型进行深度思路提取 =================
 def analyze_reward_strategies(papers):
     if not papers:
