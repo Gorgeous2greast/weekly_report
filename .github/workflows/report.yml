@@ -3,7 +3,7 @@ name: Generate Weekly AI Report
 on:
   workflow_dispatch: # 允许手动点击运行测试
   schedule:
-    - cron: '0 8 * * 5' # 每周五 UTC 8:00 (北京时间 16:00) 自动运行
+    - cron: '0 12 * * 6' # 每周六 UTC 12:00 (北京时间 20:00) 自动运行
 
 permissions:
   contents: write
