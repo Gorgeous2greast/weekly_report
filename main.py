@@ -24,7 +24,7 @@ def fetch_papers():
     keywords = ["rl", "reinforcement", "agent", "agentic", "training", "ppo", "grpo", "rlhf"]
     filtered = []
     
-    for item in papers[:30]: # 取前30篇进行深度评分
+    for item in papers[:20]: # 取前30篇进行深度评分
         paper = item.get("paper", {})
         title = paper.get("title", "").lower()
         summary = paper.get("summary", "").lower()
@@ -289,7 +289,7 @@ def generate_report_with_llm(papers):
         "model": LLM_MODEL,
         "messages": [{"role": "user", "content": prompt}],
         "temperature": 0.2,
-        "max_tokens": 16000
+        "max_tokens": 18000
     }
     
     response = requests.post(f"{LLM_BASE_URL}/chat/completions", headers=headers, json=payload)
