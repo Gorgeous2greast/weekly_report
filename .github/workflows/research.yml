@@ -28,7 +28,7 @@ jobs:
           # 直接复用你之前配置好的 Secrets
           LLM_API_KEY: ${{ secrets.LLM_API_KEY }}
           LLM_BASE_URL: ${{ secrets.LLM_BASE_URL }}
-          LLM_MODEL: ${{ secrets.LLM_MODEL }}
+          LLM_MODEL: ${{ secrets.DEEPSEEK_FLASH }}
         run: python agentic_rl_reward_search.py
 
       - name: Commit Research Report
