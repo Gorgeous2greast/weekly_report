@@ -169,7 +169,7 @@ def _fetch_arxiv_papers() -> list[dict]:
         params = {
             "search_query": query,
             "start": 0,
-            "max_results": 25,
+            "max_results": 50,
             "sortBy": "submittedDate",
             "sortOrder": "descending",
         }
@@ -476,7 +476,7 @@ def score_papers(papers):
 {papers_text}
 """
 
-    content = call_llm(prompt, temperature=0.2, max_tokens=6000)
+    content = call_llm(prompt, temperature=0.2, max_tokens=16000)
     data = parse_json_response(content)
     if not data or "scores" not in data:
         print("⚠️ 评分结果解析失败，使用空评分继续。")
