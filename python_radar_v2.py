@@ -36,36 +36,59 @@ TRACK_NAMES = {
     "rsi": "🔄 RSI / 自进化",
     "framework": "🛠️ 框架与基准动态",
 }
-# Top 12: deterministic track guarantees when enough in-scope candidates exist.
-TOP_QUOTAS = {"rsi": 4, "coding_agent": 2, "agentic_rl": 2, "rl": 2, "llm_training": 1}
+# Equal minimum allocation: top_count//5 per lane; the rest is merit-based.
+# The fixed 4 RSI places from v2 are intentionally removed.
 
-# Distinct, targeted discovery paths. Query expressions are combined with date limits.
+# Each lane gets its own independent discovery vocabulary. These queries are
+# broad for recall; primary-topic classification happens after merging.
 ARXIV_QUERIES = {
+    # Reinforcement Learning: algorithms, preference methods, reward, efficiency, RL reasoning.
+    "rl_algorithms": '(cat:cs.LG OR cat:cs.AI OR cat:cs.CL OR cat:stat.ML) AND (abs:"reinforcement learning" OR abs:"policy optimization" OR abs:"actor-critic")',
+    "rl_llm_policy": '(cat:cs.LG OR cat:cs.AI OR cat:cs.CL) AND (abs:GRPO OR abs:RLHF OR abs:RLVR OR abs:PPO OR abs:"reinforcement fine-tuning")',
+    "rl_reward": '(cat:cs.LG OR cat:cs.AI OR cat:cs.CL) AND (abs:"reward model" OR abs:"process reward" OR abs:"verifiable reward" OR abs:"credit assignment")',
+    "rl_efficiency": '(cat:cs.LG OR cat:cs.AI) AND (abs:"off-policy" OR abs:"advantage estimation" OR abs:"sample efficiency" OR abs:"asynchronous reinforcement")',
+    "rl_preference": '(cat:cs.LG OR cat:cs.CL) AND (abs:"preference optimization" OR abs:"direct preference optimization" OR abs:"online preference" OR abs:"preference learning")',
+    # Coding Agent: development agents, repo-scale execution, benchmarks and repair.
+    "coding_software": 'cat:cs.SE AND (abs:agent OR abs:"code generation" OR abs:"software engineering" OR abs:"program repair")',
+    "coding_repositories": '(cat:cs.AI OR cat:cs.CL OR cat:cs.SE) AND (abs:"coding agent" OR abs:"code agent" OR abs:"repository-level" OR abs:"repo-level" OR abs:"codebase")',
+    "coding_benchmarks": '(cat:cs.SE OR cat:cs.AI OR cat:cs.CL) AND (abs:"SWE-bench" OR abs:"software engineering benchmark" OR abs:"code agent benchmark" OR abs:"swe agent")',
+    "coding_repair": '(cat:cs.SE OR cat:cs.AI) AND (abs:"program repair" OR abs:"issue resolution" OR abs:"bug fixing" OR abs:"patch generation" OR abs:"fault localization")',
+    "coding_workflow": '(cat:cs.SE OR cat:cs.CL OR cat:cs.AI) AND (abs:"terminal agent" OR abs:"test generation" OR abs:"code navigation" OR abs:"programming assistant" OR abs:"automated software development")',
+    # Agentic RL / Agents: generic tools, long-horizon RL, multi-agent, memory, planning.
+    "agentic_tools": '(cat:cs.AI OR cat:cs.CL) AND (abs:"tool-use" OR abs:"tool use" OR abs:"tool calling" OR abs:"tool-using agent" OR abs:"api agents")',
+    "agentic_training": '(cat:cs.AI OR cat:cs.LG OR cat:cs.CL) AND (abs:"agentic reinforcement learning" OR abs:"agent reinforcement learning" OR abs:"agent trajectory" OR abs:"multi-turn reinforcement learning")',
+    "agentic_multi": '(cat:cs.AI OR cat:cs.CL) AND (abs:"multi-agent" OR abs:"agent collaboration" OR abs:"agent coordination" OR abs:"agent communication")',
+    "agentic_memory": '(cat:cs.AI OR cat:cs.CL) AND (abs:"agent memory" OR abs:"long-horizon agents" OR abs:"context engineering" OR abs:"agent experience")',
+    "agentic_planning": '(cat:cs.AI OR cat:cs.CL) AND (abs:"agent planning" OR abs:"LLM agents" OR abs:"agent workflow" OR abs:"planning agent")',
+    # LLM Training and Alignment: all stages, data, preference, test-time, efficiency.
+    "training_post": '(cat:cs.CL OR cat:cs.LG OR cat:cs.AI) AND (abs:"post-training" OR abs:"instruction tuning" OR abs:"supervised fine-tuning" OR abs:"language model alignment")',
+    "training_data": '(cat:cs.CL OR cat:cs.LG) AND (abs:"synthetic data" OR abs:"data selection" OR abs:"data mixture" OR abs:"curriculum learning") AND (abs:LLM OR abs:"language model")',
+    "training_alignment": '(cat:cs.CL OR cat:cs.LG) AND (abs:"direct preference optimization" OR abs:"model alignment" OR abs:"preference tuning" OR abs:"constitutional AI" OR abs:"reward modeling")',
+    "training_reasoning": '(cat:cs.CL OR cat:cs.LG OR cat:cs.AI) AND (abs:"test-time scaling" OR abs:"inference-time compute" OR abs:"reasoning training" OR abs:"process supervision")',
+    "training_efficient": '(cat:cs.CL OR cat:cs.LG) AND (abs:"parameter-efficient fine-tuning" OR abs:LoRA OR abs:QLoRA OR abs:"knowledge distillation" OR abs:"efficient fine-tuning")',
+    "training_safety": '(cat:cs.CL OR cat:cs.LG) AND (abs:"safety alignment" OR abs:"factuality training" OR abs:"alignment tuning" OR abs:"alignment dataset")',
+    # Self-improvement: core recursive, persistent self-evolution and weak refinements.
     "rsi_recursive": '(ti:"recursive self-improvement" OR abs:"recursive self-improvement" OR abs:"recursive self improvement" OR abs:"godel machine")',
     "rsi_improving": '(ti:"self-improving" OR abs:"self-improving agents" OR abs:"self-improving systems" OR abs:"self improving agent" OR abs:"self-improvement")',
-    "rsi_evolving": '(ti:"self-evolving" OR abs:"self-evolving" OR abs:"self-evolution" OR abs:"agent evolution")',
+    "rsi_evolving": '(ti:"self-evolving" OR abs:"self-evolving" OR abs:"self-evolution" OR abs:"agent evolution" OR abs:"co-evolution")',
     "rsi_meta": '(abs:"meta-improvement" OR abs:"self-modification" OR abs:"self-modifying" OR abs:"self-optimization" OR abs:"meta-optimization")',
-    "rsi_skills": '(abs:"skill evolution" OR abs:"skill-policy" OR abs:"skill acquisition") AND (abs:agent OR abs:LLM OR abs:"language model")',
+    "rsi_skills": '(abs:"skill evolution" OR abs:"skill-policy" OR abs:"skill acquisition" OR abs:"skill library") AND (abs:agent OR abs:LLM OR abs:"language model")',
     "rsi_autoresearch": '(abs:"automated AI research" OR abs:"autonomous research" OR abs:"AI scientist" OR abs:"automated researcher")',
     "rsi_feedback": '(abs:"self-rewarding" OR abs:"self-generated data" OR abs:"self-play" OR abs:"synthetic curriculum") AND (abs:LLM OR abs:agent OR abs:"language model")',
-    "rsi_selfrefine": '(ti:"self-refinement" OR abs:"iterative self-refinement" OR abs:"self-debugging" OR abs:"reflection-driven") AND (abs:agent OR abs:"language model")',
-    "coding_se": 'cat:cs.SE AND (abs:agent OR abs:"code generation" OR abs:"program repair" OR abs:"issue resolution")',
-    "coding_llm": '(cat:cs.CL OR cat:cs.AI OR cat:cs.LG) AND (abs:"coding agent" OR abs:"software engineering" OR abs:"SWE-bench" OR abs:"repository-level")',
-    "agentic_agents": '(cat:cs.AI OR cat:cs.CL) AND (abs:"agentic" OR abs:"tool-using agents" OR abs:"multi-agent" OR abs:"agent training")',
-    "agentic_policy": '(cat:cs.AI OR cat:cs.LG) AND (abs:"agent reinforcement learning" OR abs:"agentic reinforcement learning" OR abs:"tool use" OR abs:"agent trajectory")',
-    "rl_policy": '(cat:cs.LG OR cat:cs.AI OR cat:cs.CL) AND (abs:"reinforcement learning" OR abs:RLHF OR abs:GRPO OR abs:PPO OR abs:"policy optimization")',
-    "rl_preference": '(cat:cs.CL OR cat:cs.LG) AND (abs:"direct preference optimization" OR abs:"reward modeling" OR abs:"verifiable rewards" OR abs:"reward model")',
-    "training_llm": '(cat:cs.CL OR cat:cs.LG OR cat:cs.AI) AND (abs:"post-training" OR abs:"model alignment" OR abs:"LLM training" OR abs:"test-time scaling")',
+    "rsi_refinement": '(ti:"self-refinement" OR abs:"iterative self-refinement" OR abs:"self-debugging" OR abs:"reflection-driven") AND (abs:agent OR abs:"language model")',
 }
-QUERY_TRACK = {name: ("rsi" if name.startswith("rsi_") else
-                      "coding_agent" if name.startswith("coding_") else
-                      "agentic_rl" if name.startswith("agentic_") else
-                      "rl" if name.startswith("rl_") else "llm_training")
-               for name in ARXIV_QUERIES}
+QUERY_TRACK = {q: ("rsi" if q.startswith("rsi_") else
+                   "coding_agent" if q.startswith("coding_") else
+                   "agentic_rl" if q.startswith("agentic_") else
+                   "rl" if q.startswith("rl_") else "llm_training")
+               for q in ARXIV_QUERIES}
 
 GITHUB_REPOS = [
     "volcengine/verl", "verl-project/uni-agent", "modelscope/ms-swift",
-    "SWE-agent/SWE-agent", "scaleapi/rsi-benchmark", "quqxui/RSI-Flow",
+    "huggingface/trl", "OpenRLHF/OpenRLHF",
+    "SWE-agent/SWE-agent", "All-Hands-AI/OpenHands",
+    "langchain-ai/langgraph", "microsoft/autogen",
+    "scaleapi/rsi-benchmark", "quqxui/RSI-Flow",
 ]
 
 SOFT_EXCLUDE = re.compile(
@@ -74,13 +97,31 @@ SOFT_EXCLUDE = re.compile(
     r"vision-language-action|vla)\b", re.I,
 )
 TERMS = {
-    "rsi_core": ["recursive self-improvement", "recursive self improvement", "godel machine", "gödel machine", "self-modification", "self-modifying"],
-    "rsi_related": ["self-improving", "self improving", "self-evolving", "self evolving", "self-evolution", "self evolution", "skill evolution", "co-evolution", "self-rewarding", "self-generated data", "automated ai research", "autonomous research", "self-optimization", "self-improvement", "skill-policy"],
-    "rsi_weak": ["self-refine", "self refine", "reflexion", "self-debug", "self debug", "reflection-driven", "self-instruct"],
-    "coding_agent": ["coding agent", "code agent", "swe-bench", "software engineering", "repository-level", "repo-level", "program repair", "code generation", "issue resolution"],
-    "agentic_rl": ["agentic", "multi-agent", "tool-using agent", "agent training", "agent trajectory", "llm agent", "tool use", "tool-use"],
-    "rl": ["reinforcement learning", "rlhf", "grpo", "ppo", "dpo", "policy optimization", "reward model", "reward modeling", "verifiable reward", "self-play"],
-    "llm_training": ["llm training", "language model training", "post-training", "post training", "alignment", "fine-tuning", "fine tuning", "pretraining", "test-time scaling", "distillation"],
+    "rl": ["reinforcement learning", "rlhf", "rlvr", "grpo", "ppo", "dpo",
+           "policy optimization", "actor-critic", "advantage estimation", "off-policy",
+           "reward model", "reward modeling", "verifiable reward", "process reward",
+           "outcome reward", "preference optimization", "credit assignment", "rollout"],
+    "coding_agent": ["coding agent", "code agent", "swe-bench", "software engineering",
+                     "repository-level", "repo-level", "program repair", "code generation",
+                     "issue resolution", "bug fixing", "patch generation", "codebase",
+                     "test generation", "programming assistant", "terminal agent"],
+    "agentic_rl": ["agentic", "multi-agent", "multi agent", "tool-using agent", "tool-using agents",
+                   "agent training", "agent trajectory", "agent trajectories", "llm agents",
+                   "tool use", "tool-use", "tool calling", "agent memory", "agent planning",
+                   "agent collaboration", "agent workflow", "long-horizon agent"],
+    "llm_training": ["llm training", "language model training", "post-training", "post training",
+                     "alignment", "fine-tuning", "fine tuning", "pretraining", "pre-training",
+                     "test-time scaling", "inference-time compute", "distillation", "instruction tuning",
+                     "synthetic data", "data selection", "data mixture", "curriculum learning",
+                     "lora", "qlora", "preference tuning", "reasoning training"],
+    "rsi_core": ["recursive self-improvement", "recursive self improvement", "godel machine",
+                 "gödel machine", "self-modification", "self-modifying", "meta-improvement"],
+    "rsi_related": ["self-improving", "self improving", "self-evolving", "self evolving",
+                    "self-evolution", "self evolution", "skill evolution", "co-evolution",
+                    "self-rewarding", "self-generated data", "automated ai research",
+                    "autonomous research", "self-optimization", "self-improvement", "skill-policy"],
+    "rsi_weak": ["self-refine", "self refine", "reflexion", "self-debug", "self debug",
+                 "reflection-driven", "self-instruct", "self-refinement"],
 }
 TOKEN_RE = re.compile(r"\b(?:rl|llm|rsi)\b", re.I)
 ARXIV_ID_RE = re.compile(r"(?:^|/)(\d{4}\.\d{4,5}|[a-z-]+(?:\.[A-Z]{2})?/\d{7})(?:v\d+)?$", re.I)
@@ -182,28 +223,34 @@ def keyword_hits(text: str, words: list[str]) -> int:
 
 
 def heuristic_track(p: dict) -> tuple[str, str, dict]:
-    """Cheap broad classifier; RSI levels are discovery leads, NOT proof of recursion."""
+    """Title-weighted multi-lane signals; query provenance is a small bonus.
+
+    RSI level is a *lead*, not proof of a recursive algorithm.
+    No lane receives a permanent weighting preference.
+    """
     if p.get("source") == "github_release" or "github_release" in p.get("sources", []):
         return "framework", "none", {}
-    content = f'{p.get("title", "")} {p.get("abstract", "")}'.lower()
-    scores = {t: keyword_hits(content, TERMS[t]) for t in TRACKS if t != "rsi"}
-    core = keyword_hits(content, TERMS["rsi_core"])
-    related = keyword_hits(content, TERMS["rsi_related"])
-    weak = keyword_hits(content, TERMS["rsi_weak"])
+    title = p.get("title", "").lower()
+    body = p.get("abstract", "").lower()
+    signals = {key: TERMS[key] for key in TRACKS if key != "rsi"}
+    signals["rsi"] = TERMS["rsi_core"] + TERMS["rsi_related"] + TERMS["rsi_weak"]
+    scores = {lane: 3 * keyword_hits(title, terms) + keyword_hits(body, terms)
+              for lane, terms in signals.items()}
+    core = keyword_hits(title + " " + body, TERMS["rsi_core"])
+    related = keyword_hits(title + " " + body, TERMS["rsi_related"])
+    weak = keyword_hits(title + " " + body, TERMS["rsi_weak"])
     rsi_level = "core_candidate" if core else "related" if related else "weak" if weak else "none"
-    scores["rsi"] = core * 5 + related * 3 + weak
-    # Full-text matches allow HF additions that mention the niche only in the abstract.
-    if term_match(content, "rl"):
-        scores["rl"] += 1
-    if term_match(content, "llm"):
+    # Generic mentions of LLM/agent/RL are supporting evidence, not primary labels.
+    if term_match(title, "rl"):
+        scores["rl"] += 2
+    if term_match(title, "llm"):
         scores["llm_training"] += 1
     query_tracks = {QUERY_TRACK[q] for q in p.get("matched_queries", []) if q in QUERY_TRACK}
-    for t in query_tracks:
-        scores[t] = scores.get(t, 0) + 2
-    # Prefer RSI if its distinctive signals exist; RL self-play alone is not RSI.
-    best = max(TRACKS, key=lambda t: (scores.get(t, 0), t == "rsi"))
+    for lane in query_tracks:
+        scores[lane] += 2
+    best = max(TRACKS, key=lambda t: scores.get(t, 0))
     if scores.get(best, 0) == 0:
-        best = "llm_training"
+        best = "llm_training"  # transparent fallback; LLM may relabel/reject
     return best, rsi_level, scores
 
 
@@ -399,7 +446,7 @@ class Fetcher:
                            "soft_exclusion": bool(SOFT_EXCLUDE.search(title + " " + summary)),
                            "hf_upvotes": item.get("numUpvotes", 0)}
                     track, rsi, scores = heuristic_track(rec)
-                    # HF is supplementary; do not gate RSI behind RL keywords.
+                    # HF is supplementary; no track requires another track's keyword.
                     if max(scores.values(), default=0) <= 1 and rsi == "none":
                         self.metrics["hf_low_relevance"] += 1
                         continue
@@ -573,35 +620,33 @@ def validate_llm_score(item: dict, clock: datetime, paper: dict) -> dict | None:
 
 
 def choose_for_llm(papers: list[dict], limit: int, clock: datetime) -> set[str]:
-    """Stratified, RSI-favoring candidate budget: remaining candidates stay available."""
+    """Fair per-lane LLM scoring coverage, then global quality fill.
+
+    Unlike v2, no track is allowed to reserve half the budget.
+    """
     if limit <= 0:
         return set()
     bins = defaultdict(list)
     for p in papers:
         bins[p["assessment"]["track"]].append(p)
     for items in bins.values():
-        items.sort(key=lambda p: (p["assessment"]["total_score"], p.get("activity_date", "")), reverse=True)
-    # Reserve up to half the LLM budget for RSI if that pool is large.
-    take = []
-    rsi_limit = max(1, limit // 2)
-    take.extend(bins["rsi"][:rsi_limit])
-    seen = {paper_key(p) for p in take}
-    # Round-robin across all tracks to protect breadth.
-    positions = {track: (len(take) if track == "rsi" else 0) for track in TRACKS}
-    while len(take) < limit:
-        advanced = False
-        for track in TRACKS:
-            items = bins[track]
-            idx = positions[track]
-            if idx < len(items) and len(take) < limit:
-                positions[track] += 1
-                candidate = items[idx]
-                if paper_key(candidate) not in seen:
-                    take.append(candidate)
-                    seen.add(paper_key(candidate))
-                    advanced = True
-        if not advanced:
-            break
+        items.sort(key=lambda p: (p["assessment"]["total_score"],
+                                  p.get("activity_date", "")), reverse=True)
+    chosen: list[dict] = []
+    seen: set[str] = set()
+    per_lane_cap = limit // len(TRACKS)
+    for lane in TRACKS:
+        for p in bins[lane][:per_lane_cap]:
+            key = paper_key(p)
+            if key not in seen:
+                chosen.append(p)
+                seen.add(key)
+    remaining = sorted((p for p in papers if paper_key(p) not in seen),
+                       key=lambda p: (p["assessment"]["total_score"],
+                                      p.get("activity_date", "")), reverse=True)
+    for p in remaining[:max(0, limit - len(chosen))]:
+        chosen.append(p)
+        seen.add(paper_key(p))
     return seen
 
 
@@ -609,10 +654,14 @@ def score_candidates(papers: list[dict], c: Config, clock: datetime, llm: LLM) -
     stats = Counter()
     for p in papers:
         p["assessment"] = heuristic_score(p, clock)
+        _, _, signals = heuristic_track(p)
+        p["related_tracks"] = sorted([lane for lane, value in signals.items()
+                                      if value >= 3 and value >= 0.4 * max(signals.values(), default=0)])
     pending = [p for p in papers if p.get("source") != "github_release"]
     selected_keys = choose_for_llm(pending, c.max_llm_candidates, clock)
     selected = [p for p in pending if paper_key(p) in selected_keys]
     stats["llm_eligible"] = len(selected)
+    stats["llm_allocation_by_track"] = dict(Counter(p["assessment"]["track"] for p in selected))
     stats["llm_overflow_heuristic"] = len(pending) - len(selected)
     for offset in range(0, len(selected), c.batch_size):
         batch = selected[offset:offset + c.batch_size]
@@ -624,7 +673,8 @@ def score_candidates(papers: list[dict], c: Config, clock: datetime, llm: LLM) -
         prompt = (
             f"当前 UTC 时间为 {clock.date().isoformat()}。"
             "对这些 AI 论文逐篇评分/分类。请使用摘要证据，而不是单靠词语命中或猜测机构。"
-            "主赛道 track 只能为 rl,coding_agent,agentic_rl,llm_training,rsi。"
+            "每篇只指定一个主赛道 track，只能为 rl,coding_agent,agentic_rl,llm_training,rsi；"
+            "按主要技术贡献分类，而非只看相似关键词。五个赛道的质量评分标准一致。"
             "RSI rsi_level: core=证据明确表明递归改进机制本身，related=持久技能/模型/工作流自我改进但未证实递归，"
             "weak=单任务自修正，none=无关。并非所有 self-play 都是 RSI。"
             "in_scope: in_scope/out_of_scope/uncertain。只在机器人/具身/世界模型是主要贡献时 out_of_scope；"
@@ -650,47 +700,56 @@ def score_candidates(papers: list[dict], c: Config, clock: datetime, llm: LLM) -
             else:
                 stats["heuristic_fallback"] += 1
     stats["total_scored"] = len(pending)
+    stats["llm_output_by_track"] = dict(Counter(p["assessment"]["track"] for p in selected
+                                                if p["assessment"]["score_origin"] == "llm"))
     return stats
 
 
 def select_for_report(papers: list[dict], c: Config, clock: datetime) -> tuple[dict, list]:
-    """Deterministic selection. `top_papers` never lets one large track hide RSI."""
+    """Equal track minimum in featured list, then fill spare positions by score."""
     eligible = [p for p in papers if p.get("source") != "github_release" and
                 recent(p.get("activity_date"), c.report_days, clock) and
                 p.get("assessment", {}).get("in_scope") != "out_of_scope"]
     grouped = defaultdict(list)
     for p in eligible:
         grouped[p["assessment"]["track"]].append(p)
-    for t in TRACKS:
-        grouped[t].sort(key=lambda p: (p["assessment"]["total_score"],
-                                        p.get("activity_date", "")), reverse=True)
-    def eligible_for_feature(p: dict) -> bool:
-        assessment = p["assessment"]
-        # Single-shot self-refinement can be listed as related reading, not strong RSI.
-        return not (assessment["track"] == "rsi" and assessment.get("rsi_level") in {"weak", "none"})
+    for lane in TRACKS:
+        grouped[lane].sort(key=lambda p: (p["assessment"]["total_score"],
+                                            p.get("activity_date", "")), reverse=True)
 
-    top = []
+    def eligible_for_feature(p: dict) -> bool:
+        a = p["assessment"]
+        # One-shot self-correction is related reading, not a core RSI feature.
+        return not (a["track"] == "rsi" and a.get("rsi_level") in {"weak", "none"})
+
+    top: list[dict] = []
     chosen = set()
-    for track, quota in TOP_QUOTAS.items():
-        featureable = [p for p in grouped[track] if eligible_for_feature(p)]
-        for p in featureable[:min(quota, c.top_count - len(top))]:
+    # floor(15 / 5) = 3 each with enough real qualifying candidates.
+    quota = c.top_count // len(TRACKS)
+    for lane in TRACKS:
+        for p in (p for p in grouped[lane] if eligible_for_feature(p)):
+            if len([q for q in top if q["assessment"]["track"] == lane]) >= quota:
+                break
             key = paper_key(p)
             if key not in chosen:
                 top.append(p)
                 chosen.add(key)
-    all_remaining = sorted((p for p in eligible if paper_key(p) not in chosen and eligible_for_feature(p)),
-                           key=lambda p: (p["assessment"]["total_score"], p.get("activity_date", "")), reverse=True)
-    for p in all_remaining[:max(0, c.top_count - len(top))]:
+    remaining = sorted((p for p in eligible if paper_key(p) not in chosen and eligible_for_feature(p)),
+                       key=lambda p: (p["assessment"]["total_score"],
+                                      p.get("activity_date", "")), reverse=True)
+    for p in remaining[:max(0, c.top_count - len(top))]:
         top.append(p)
         chosen.add(paper_key(p))
-    top.sort(key=lambda p: (p["assessment"]["total_score"], p.get("activity_date", "")), reverse=True)
+    top.sort(key=lambda p: (p["assessment"]["total_score"],
+                            p.get("activity_date", "")), reverse=True)
     selections = {}
-    for track in TRACKS:
-        in_top = [p for p in top if p["assessment"]["track"] == track]
-        worth = [p for p in grouped[track] if paper_key(p) not in chosen][:c.worth_per_track]
-        selections[track] = {"recommended": in_top, "worth_knowing": worth,
-                             "available": len(grouped[track])}
-    gh = [p for p in papers if p.get("source") == "github_release" and recent(p.get("activity_date"), c.report_days, clock)]
+    for lane in TRACKS:
+        in_top = [p for p in top if p["assessment"]["track"] == lane]
+        worth = [p for p in grouped[lane] if paper_key(p) not in chosen][:c.worth_per_track]
+        selections[lane] = {"recommended": in_top, "worth_knowing": worth,
+                            "available": len(grouped[lane])}
+    gh = [p for p in papers if p.get("source") == "github_release" and
+          recent(p.get("activity_date"), c.report_days, clock)]
     gh.sort(key=lambda p: p.get("published", ""), reverse=True)
     selections["framework"] = {"recommended": gh, "worth_knowing": [], "available": len(gh)}
     return selections, top
@@ -752,6 +811,7 @@ def build_report(selections: dict, top: list, summaries: dict, clock: datetime, 
                 "authors": p.get("authors") or "N/A", "published": p.get("published") or "N/A",
                 "activity_date": p.get("activity_date", ""), "categories": p.get("categories", []),
                 "source": p.get("source", ""), "sources": p.get("sources", []),
+                "related_tracks": p.get("related_tracks", []),
                 "rsi_level": assessment.get("rsi_level", "none"),
                 "score_origin": assessment.get("score_origin", "unscored"),
                 "in_scope": assessment.get("in_scope", "uncertain"),
@@ -854,7 +914,9 @@ def report_markdown(report: dict) -> str:
                 lines.extend([f"#### {link(p['title'], p['url'])}", "",
                               f"作者：{e(p['authors'])} · 发表：{e(p['published'])} · "
                               f"评分：{e(p['total_score'])}（{e(p['score_origin'])}）"
-                              + (f" · RSI={e(p['rsi_level'])}" if track["track_id"] == "rsi" else ""), "",
+                              + (f" · RSI={e(p['rsi_level'])}" if track["track_id"] == "rsi" else "")
+                              + (f" · 关联方向={e(', '.join(p.get('related_tracks', [])))}"
+                                 if len(p.get("related_tracks", [])) > 1 else ""), "",
                               e(p.get("core_contribution") or p.get("abstract", "")[:260]), ""])
                 if category == "recommended":
                     lines.extend([f"技术亮点：{e(p.get('technical_highlights', ''))}", "",
@@ -893,7 +955,8 @@ small{color:var(--muted)}details{margin-top:12px}summary{cursor:pointer}pre{over
 {% set items = track[item_type] %}{% if items %}<h3>{{ label }}</h3>
 {% for paper in items %}<article class="card"><h3><a href="{{ paper.url }}" rel="noopener noreferrer" target="_blank">{{ paper.title }}</a></h3>
 <p class="meta">{{ paper.authors }} · {{ paper.published }} · 评分 {{ paper.total_score }} ({{ paper.score_origin }})
-{% if track.track_id == 'rsi' %}<span class="tag">RSI {{ paper.rsi_level }}</span>{% endif %}</p>
+{% if track.track_id == 'rsi' %}<span class="tag">RSI {{ paper.rsi_level }}</span>{% endif %}
+{% if paper.related_tracks|length > 1 %}<span class="tag">关联: {{ paper.related_tracks|join(', ') }}</span>{% endif %}</p>
 <p>{{ paper.core_contribution or paper.abstract[:380] }}</p>
 {% if item_type == 'recommended' %}<p><b>技术亮点：</b>{{ paper.technical_highlights or '摘要未说明' }}</p>
 <p><b>应用方向：</b>{{ paper.application_direction or '需要阅读全文评估' }}</p>{% endif %}
@@ -943,6 +1006,14 @@ def execute(c: Config, input_json: Path | None = None) -> dict:
                              "per_query": fetcher.per_query, "source_metrics": dict(fetcher.metrics)}
     fresh = merge_records(fresh)
     stats["fresh_deduplicated"] = len(fresh)
+    # A single paper may be matched by many queries; counts are coverage, not
+    # mutually exclusive unique contribution. Preserve both primary and cross-lane audit.
+    stats["discovery_query_coverage"] = dict(Counter(
+        query for p in fresh for query in p.get("matched_queries", [])))
+    stats["discovery_track_coverage"] = dict(Counter(
+        lane for p in fresh for lane in p.get("discovery_tracks", [])))
+    stats["discovery_primary_heuristic"] = dict(Counter(
+        heuristic_track(p)[0] for p in fresh if p.get("source") != "github_release"))
     history_path = data_dir / "paper_history.json"
     history = load_json(history_path, [])
     if not isinstance(history, list):
@@ -966,6 +1037,8 @@ def execute(c: Config, input_json: Path | None = None) -> dict:
     score_stats = score_candidates(window, c, clock, llm)
     stats["scoring"] = dict(score_stats)
     stats["classified_discovery_tracks"] = dict(Counter(p["assessment"]["track"] for p in window))
+    stats["cross_track_lexical_coverage"] = dict(Counter(
+        lane for p in window for lane in p.get("related_tracks", [])))
     stats["rsi_levels_discovery"] = dict(Counter(p["assessment"]["rsi_level"] for p in window
                                                if p["assessment"]["track"] == "rsi"))
     stats["rsi_source_coverage"] = dict(Counter(source for p in window
@@ -987,8 +1060,8 @@ def execute(c: Config, input_json: Path | None = None) -> dict:
     page = render_html(report)
     (report_dir / f"{stamp}.html").write_text(page, encoding="utf-8")
     (out / "index.html").write_text(page, encoding="utf-8")
-    LOG.info("Report: %s | candidates=%d, top=%d, RSI=%d", report_dir / f"{stamp}.md",
-             stats["report_candidates"], len(top), selections["rsi"]["available"])
+    LOG.info("Report: %s | candidates=%d, top=%d", report_dir / f"{stamp}.md",
+             stats["report_candidates"], len(top))
     for track, n in stats["report_tracks"].items():
         LOG.info("  %-15s %d", track, n)
     webhook_notify(c, http, report)
@@ -996,7 +1069,7 @@ def execute(c: Config, input_json: Path | None = None) -> dict:
 
 
 def get_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="Weekly AI/RSI paper discovery and reports")
+    parser = argparse.ArgumentParser(description="Balanced five-track AI paper discovery and weekly reports")
     parser.add_argument("--discovery-days", type=int, default=21)
     parser.add_argument("--report-days", type=int, default=7)
     parser.add_argument("--top-count", type=int, default=12)
