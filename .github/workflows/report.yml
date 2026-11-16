@@ -56,3 +56,62 @@ jobs:
           git add reports/
           git commit -m "Add weekly report $(date +%Y-%m-%d)" || echo "No changes to commit"
           git push
+
+# name: Generate Weekly AI Report
+
+# on:
+#   workflow_dispatch: # 允许手动点击运行测试
+#   schedule:
+#     - cron: '0 19 * * 6' # 每周六 UTC 12:00 (北京时间 20:00) 自动运行
+
+# permissions:
+#   contents: write
+#   pages: write
+#   id-token: write
+
+# jobs:
+#   build-and-deploy:
+#     runs-on: ubuntu-latest
+#     environment:
+#       name: github-pages
+#       url: ${{ steps.deployment.outputs.page_url }}
+#     steps:
+#       - name: Checkout code
+#         uses: actions/checkout@v4
+
+#       - name: Set up Python
+#         uses: actions/setup-python@v5
+#         with:
+#           python-version: '3.10'
+
+#       - name: Install dependencies
+#         run: pip install -r requirements.txt
+
+#       - name: Run Report Script
+#         env:
+#           LLM_API_KEY: ${{ secrets.LLM_API_KEY }}
+#           LLM_BASE_URL: ${{ secrets.LLM_BASE_URL }}
+#           LLM_MODEL: ${{ secrets.DEEPSEEK_FLASH }}
+#           WEBHOOK_URL: ${{ secrets.WEBHOOK_URL }}
+#         run: python main.py
+
+#       - name: Setup Pages
+#         uses: actions/configure-pages@v4
+
+#       - name: Upload artifact
+#         uses: actions/upload-pages-artifact@v3
+#         with:
+#           path: '.' # 上传根目录下的 index.html 和 templates
+
+#       - name: Deploy to GitHub Pages
+#         id: deployment
+#         uses: actions/deploy-pages@v4
+        
+#       # 🌟 新增：将生成的 Markdown 文件 Commit 回仓库
+#       - name: Commit Markdown Report to Repo
+#         run: |
+#           git config --local user.email "action@github.com"
+#           git config --local user.name "GitHub Action"
+#           git add reports/
+#           git commit -m "Add weekly report $(date +%Y-%m-%d)" || echo "No changes to commit"
+#           git push
